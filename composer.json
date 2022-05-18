@@ -1,0 +1,32 @@
+{
+    "name": "toshkq93/laravel-logger",
+    "description": "logging for laravel src/routes",
+    "keywords": ["laravel", "file", "dto", "repository", "service", "request", "resource", "controller"],
+    "minimum-stability": "stable",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Anton Stanovoi",
+            "email": "a.stanovoi@imedia.by",
+            "homepage": "https://github.com/toshkq93"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "spatie/data-transfer-object": "^3.7",
+        "nette/php-generator": "^4.0",
+        "doctrine/dbal": "^3.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "Toshkq93\\Components\\": "src"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Toshkq93\\Components\\Providers\\ComponentProvider"
+            ]
+        }
+    }
+}
