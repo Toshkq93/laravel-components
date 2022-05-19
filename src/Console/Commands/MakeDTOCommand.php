@@ -11,7 +11,9 @@ use Toshkq93\Components\Services\DTOService;
 class MakeDTOCommand extends Command
 {
     /** @var string */
-    protected $signature = 'make:dto {name} {--properties=}';
+    protected $signature = 'make:dto
+                            {name}
+                            {--properties=}';
 
     /** @var string */
     protected $description = 'Create DTO';
@@ -33,11 +35,13 @@ class MakeDTOCommand extends Command
      */
     public function handle()
     {
-        $this->service->setFolder(Str::contains($this->getNameInput(), 'DTO') ? DTONameEnum::DTO : DTONameEnum::FILTER);
+        $this->service->setFolder(Str::contains($this->getNameInput(), 'Output') ? DTONameEnum::OUTPUT : DTONameEnum::INPUT);
         $this->service->setProperties($this->option('properties'));
         $this->service->setArgument($this->getNameInput());
 
-        if (!File::exists(config('path.paths.dto') . DIRECTORY_SEPARATOR . config('path.baseFile.dto') . '.php')) {
+        if (!File::exists(
+            config('component.paths.rootPaths.dto') . DIRECTORY_SEPARATOR . config('component.baseFile.dto') . '.php'
+        )) {
             $this->service->createBaseDTO();
         }
 

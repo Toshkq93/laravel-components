@@ -49,7 +49,7 @@ class RequestService
      */
     public function create(): void
     {
-        $fullPathFolder = config('path.paths.request') . $this->getFolderPath();
+        $fullPathFolder = config('component.paths.request') . $this->getFolderPath();
 
         if (!File::exists($fullPathFolder)) {
             File::makeDirectory(
@@ -62,10 +62,14 @@ class RequestService
         $this->generatePHP($this->replaceRealNames(), $fullPathFolder);
     }
 
-
+    /**
+     * @param array $requests
+     * @param string $path
+     * @return void
+     */
     public function generatePHP(array $requests, string $path): void
     {
-        $namespaceClass = config('path.namespaces.request') . $this->getFolderPath();
+        $namespaceClass = config('component.namespaces.request') . $this->getFolderPath();
 
         foreach ($requests as $request) {
             $filePath = $path . DIRECTORY_SEPARATOR . $request . 'Request.php';
@@ -119,8 +123,8 @@ class RequestService
         string       $className
     )
     {
-        $nameFilter = $className . 'Filter';
-        $namespaceFilter = config('path.namespaces.filter') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $nameFilter;
+        $nameFilter = $className . 'Input';
+        $namespaceFilter = config('component.namespaces.input') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $nameFilter;
         $className = Str::lcfirst($className);
 
         $namespace
@@ -138,7 +142,7 @@ class RequestService
     )
     {
         $methodGetDTO = $class
-            ->addMethod('getFilterDTO')
+            ->addMethod('getInputDTO')
             ->setReturnType($namespaceFilter)
             ->addComment('@return ' . $nameFilter);
 
@@ -154,17 +158,17 @@ class RequestService
                 $collectionTypes = Str::of($property['type'])->explode('|');
                 $methodRules->addBody("'{$key}' => [");
 
-                if ($collectionTypes->count() > 1){
-                    foreach ($collectionTypes as $type){
-                        if (Str::contains($type,'Carbon')){
+                if ($collectionTypes->count() > 1) {
+                    foreach ($collectionTypes as $type) {
+                        if (Str::contains($type, 'Carbon')) {
                             $methodRules
                                 ->addBody("'date',");
-                        }else{
+                        } else {
                             $methodRules
                                 ->addBody("'{$type}',");
                         }
                     }
-                }else{
+                } else {
                     $methodRules
                         ->addBody("'{$collectionTypes->first()}'");
                 }

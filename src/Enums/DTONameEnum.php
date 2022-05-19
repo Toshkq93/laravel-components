@@ -4,6 +4,6 @@ namespace Toshkq93\Components\Enums;
 
 class DTONameEnum
 {
-    const DTO = 'DTO';
-    const FILTER = 'Filters';
+    const OUTPUT = 'output';
+    const INPUT = 'input';
 }

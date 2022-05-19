@@ -16,6 +16,7 @@ class MakeRequestCommand extends Command
                             {name}
                             {--properties}';
 
+    /** @var bool  */
     protected $hidden = true;
     /**
      * The console command description.

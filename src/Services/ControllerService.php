@@ -2,11 +2,16 @@
 
 namespace Toshkq93\Components\Services;
 
+use App\Http\Controllers\Controller;
 use File;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Nette\PhpGenerator\ClassType;
+use Nette\PhpGenerator\Method;
+use Nette\PhpGenerator\Parameter;
 use Nette\PhpGenerator\PhpFile;
+use Nette\PhpGenerator\PhpNamespace;
 use Toshkq93\Components\Enums\MethodsByClassEnum;
 
 class ControllerService
@@ -50,7 +55,7 @@ class ControllerService
      */
     public function createBaseController(): void
     {
-        $pathFolder = config('path.paths.controller') . $this->getFolderPath();
+        $pathFolder = config('component.paths.controller') . $this->getFolderPath();
 
         if (!File::exists($pathFolder)) {
             File::makeDirectory(
@@ -60,23 +65,20 @@ class ControllerService
             );
         }
 
-        $this->namespaceBaseController = config('path.namespaces.controller');
-        $nameBaseController = 'BaseController';
-
-        $namespaceController = 'App\\Http\\Controllers\\Controller';
+        $this->namespaceBaseController = config('component.namespaces.controller');
 
         $file = new PhpFile();
 
         $namespace = $file
             ->addNamespace($this->namespaceBaseController)
-            ->addUse($namespaceController);
+            ->addUse(Controller::class);
 
         $class = $namespace
-            ->addClass('BaseController');
+            ->addClass(config('component.baseFile.controller'));
 
-        $class->setExtends($namespaceController);
+        $class->setExtends(Controller::class);
 
-        File::put(config('path.paths.controller') . '\\' . $nameBaseController . '.php', $file);
+        File::put(config('component.paths.controller') . '\\' . config('component.baseFile.controller') . '.php', $file);
     }
 
     /**
@@ -84,15 +86,10 @@ class ControllerService
      */
     public function create(): void
     {
-        $this->generatePHP();
-    }
-
-    private function generatePHP()
-    {
-        $namespaceClass = config('path.namespaces.controller') . $this->getFolderPath();
+        $namespaceClass = config('component.namespaces.controller') . $this->getFolderPath();
         $className = $this->className() . 'Controller';
-        $classPath = config('path.paths.controller') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $className . '.php';
-        $namespaceBaseController = config('path.namespaces.controller') . '\\BaseController';
+        $classPath = config('component.paths.controller') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $className . '.php';
+        $namespaceBaseController = config('component.namespaces.base.controller') . DIRECTORY_SEPARATOR . config('component.baseFile.controller');
 
         $controller = new PhpFile();
 
@@ -105,106 +102,148 @@ class ControllerService
             ->setExtends($namespaceBaseController);
 
         if ($this->options['service']) {
-            $namespaceService = config('path.namespaces.contracts.service') . $this->getFolderPath() . DIRECTORY_SEPARATOR . 'i' . $this->className() . 'Service';
-
-            $namespace
-                ->addUse($namespaceService);
-
-            $class
-                ->addMethod('__construct')
-                ->addPromotedParameter('service')
-                ->setType($namespaceService)
-                ->setPrivate();
+            $this->addService($namespace, $class);
         }
 
         foreach ($this->methods as $method) {
             $methodClass = $class
                 ->addMethod($method)
                 ->setPublic();
-            $parameters = $methodClass
+            $parameter = $methodClass
                 ->addParameter('request');
 
-            if (!$this->options['request']) {
-                $methodClass
-                    ->addComment('@param Request $request');
-
-                $namespace
-                    ->addUse(Request::class);
-
-                $parameters
-                    ->setType(Request::class);
-            } else {
-                $namespaceRequest = config('path.namespaces.request') . $this->getFolderPath() . DIRECTORY_SEPARATOR . Str::ucfirst($method) . $this->className() . 'Request';
-
-                $methodClass
-                    ->addComment('@param ' . Str::ucfirst($method) . $this->className() . 'Request $request');
-
-                $namespace
-                    ->addUse($namespaceRequest);
-
-                $parameters
-                    ->setType($namespaceRequest);
-            }
+            $this->generateInputParameters($methodClass, $namespace, $parameter, $method);
 
             if ($this->options['resource'] && $this->options['service']) {
-                $nameResource = Str::ucfirst($method) . $this->className();
-                $namespaceResource = config('path.namespaces.resource') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $nameResource;
-
-                if ($this->options['request']) {
-                    $string = '$this->service->' . $method;
-                } else {
-                    $string = '$this->service->' . $method;
-                }
-
-                if ($this->options['dto']) {
-                    $string .= '($request->getFilterDTO())';
-                } else {
-                    $string .= '($request->all())';
-                }
-
-                switch ($method) {
-                    case MethodsByClassEnum::INDEX:
-                        $nameResource .= 'Collection';
-                        $namespaceResource .= 'Collection';
-                        $namespace
-                            ->addUse($namespaceResource);
-
-                        $methodClass
-                            ->addComment('@return ' . $nameResource)
-                            ->setReturnType($namespaceResource)
-                            ->addBody('return new ' . $nameResource . '('
-                                . $string .
-                                ');');
-                        break;
-                    case MethodsByClassEnum::DELETE:
-                    case MethodsByClassEnum::UPDATE:
-                        $namespace
-                            ->addUse(JsonResponse::class);
-
-                        $methodClass
-                            ->addComment('@return JsonResponse')
-                            ->setReturnType(JsonResponse::class)
-                            ->addBody('return response()->json(' . $string . ');');
-                        break;
-                    case MethodsByClassEnum::CREATE:
-                    case MethodsByClassEnum::SHOW:
-                        $nameResource .= 'Resource';
-                        $namespaceResource .= 'Resource';
-                        $namespace
-                            ->addUse($namespaceResource);
-
-                        $methodClass
-                            ->addComment('@return ' . $nameResource)
-                            ->setReturnType($namespaceResource)
-                            ->addBody('return new ' . $nameResource . '('
-                                . $string .
-                                ');');
-                        break;
-                }
+                $this->generateBody($method, $namespace, $methodClass);
             }
         }
 
         File::put($classPath, $controller);
+    }
+
+    /**
+     * @param string $method
+     * @param PhpNamespace $namespace
+     * @param Method $methodClass
+     * @return void
+     */
+    private function generateBody(
+        string       $method,
+        PhpNamespace $namespace,
+        Method       $methodClass
+    ): void
+    {
+        $nameResource = Str::ucfirst($method) . $this->className();
+        $namespaceResource = config('component.namespaces.resource') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $nameResource;
+
+        if ($this->options['request']) {
+            $body = '$this->service->' . $method;
+        } else {
+            $body = '$this->service->' . $method;
+        }
+
+        if ($this->options['dto']) {
+            $body .= '($request->getFilterDTO())';
+        } else {
+            $body .= '($request->all())';
+        }
+
+        switch ($method) {
+            case MethodsByClassEnum::INDEX:
+                $nameResource .= 'Collection';
+                $namespaceResource .= 'Collection';
+                $namespace
+                    ->addUse($namespaceResource);
+
+                $methodClass
+                    ->addComment('@return ' . $nameResource)
+                    ->setReturnType($namespaceResource)
+                    ->addBody('return new ' . $nameResource . '('
+                        . $body .
+                        ');');
+                break;
+            case MethodsByClassEnum::DELETE:
+            case MethodsByClassEnum::UPDATE:
+                $namespace
+                    ->addUse(JsonResponse::class);
+
+                $methodClass
+                    ->addComment('@return JsonResponse')
+                    ->setReturnType(JsonResponse::class)
+                    ->addBody('return response()->json(' . $body . ');');
+                break;
+            case MethodsByClassEnum::CREATE:
+            case MethodsByClassEnum::SHOW:
+                $nameResource .= 'Resource';
+                $namespaceResource .= 'Resource';
+                $namespace
+                    ->addUse($namespaceResource);
+
+                $methodClass
+                    ->addComment('@return ' . $nameResource)
+                    ->setReturnType($namespaceResource)
+                    ->addBody('return new ' . $nameResource . '('
+                        . $body .
+                        ');');
+                break;
+        }
+    }
+
+    /**
+     * @param PhpNamespace $namespace
+     * @param ClassType $class
+     * @return void
+     */
+    private function addService(PhpNamespace $namespace, ClassType $class): void
+    {
+        $namespaceService = config('component.namespaces.contracts.service') . $this->getFolderPath() . DIRECTORY_SEPARATOR . 'i' . $this->className() . 'Service';
+
+        $namespace
+            ->addUse($namespaceService);
+
+        $class
+            ->addMethod('__construct')
+            ->addPromotedParameter('service')
+            ->setType($namespaceService)
+            ->setPrivate();
+    }
+
+    /**
+     * @param Method $methodClass
+     * @param PhpNamespace $namespace
+     * @param Parameter $parameter
+     * @param string $method
+     * @return void
+     */
+    private function generateInputParameters(
+        Method       $methodClass,
+        PhpNamespace $namespace,
+        Parameter    $parameter,
+        string       $method
+    ): void
+    {
+        if (!$this->options['request']) {
+            $methodClass
+                ->addComment('@param Request $request');
+
+            $namespace
+                ->addUse(Request::class);
+
+            $parameter
+                ->setType(Request::class);
+        } else {
+            $namespaceRequest = config('component.namespaces.request') . $this->getFolderPath() . DIRECTORY_SEPARATOR . Str::ucfirst($method) . $this->className() . 'Request';
+
+            $methodClass
+                ->addComment('@param ' . Str::ucfirst($method) . $this->className() . 'Request $request');
+
+            $namespace
+                ->addUse($namespaceRequest);
+
+            $parameter
+                ->setType($namespaceRequest);
+        }
     }
 
     /**

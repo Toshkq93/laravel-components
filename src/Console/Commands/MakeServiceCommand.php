@@ -2,7 +2,6 @@
 
 namespace Toshkq93\Components\Console\Commands;
 
-use App\Exceptions\Entities\EntityNotFoundException;
 use File;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
@@ -18,7 +17,8 @@ class MakeServiceCommand extends Command
     protected $signature = 'make:service
                             {name}
                             {?--dto}
-                            {?--repository}';
+                            {?--repository}
+                            {--choice}';
 
     /** @var bool */
     protected $hidden = true;
@@ -45,10 +45,9 @@ class MakeServiceCommand extends Command
     public function handle()
     {
         $this->service->setArgument($this->getNameInput());
-        $this->service->setLaravel($this->laravel);
         $this->service->setOption($this->options());
 
-        if (!File::exists(config('path.rootPaths.service') . $this->getFolderPath() . DIRECTORY_SEPARATOR . "i{$this->className()}Service.php")) {
+        if ($this->option('choice') or !File::exists(config('component.paths.rootPaths.service') . $this->getFolderPath() . DIRECTORY_SEPARATOR . "i{$this->className()}Service.php")) {
             $this->service->createInterface();
         }
 

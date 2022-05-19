@@ -70,9 +70,9 @@ class DTOService
      */
     public function createBaseDTO(): void
     {
-        if (!File::exists(config('path.paths.dto'))) {
+        if (!File::exists(config('component.paths.rootPaths.dto'))) {
             File::makeDirectory(
-                config('path.paths.dto'), 0777,
+                config('component.paths.rootPaths.dto'), 0777,
                 true,
                 true
             );
@@ -81,33 +81,37 @@ class DTOService
         $file = new PhpFile();
 
         $namespace = $file
-            ->addNamespace(config('path.namespaces.dto'))
+            ->addNamespace(config('component.namespaces.base.dto'))
             ->addUse(DataTransferObject::class);
 
         $class = $namespace
-            ->addClass(config('path.baseFile.dto'))
+            ->addClass(config('component.baseFile.dto'))
             ->setExtends(DataTransferObject::class);
 
-        File::put(config('path.paths.dto') . DIRECTORY_SEPARATOR . config('path.baseFile.dto') . '.php', $file);
+        File::put(config('component.paths.rootPaths.dto') . DIRECTORY_SEPARATOR . config('component.baseFile.dto') . '.php', $file);
     }
 
-    public function create()
+    /**
+     * @return void
+     */
+    public function create(): void
     {
         $this->createCasterDate();
 
-        $namespaceFile = ($this->folder == DTONameEnum::DTO ? config('path.namespaces.dto') : config('path.namespaces.filter')) . $this->getFolderPath();
+        $namespaceFile = ($this->folder == DTONameEnum::OUTPUT ? config('component.namespaces.output') : config('component.namespaces.input')) . $this->getFolderPath();
+        $namespaceBase = config('component.namespaces.base.dto') . DIRECTORY_SEPARATOR . config('component.baseFile.dto');
 
         foreach ($this->replaceRealNames() as $dto) {
             $file = new PhpFile();
 
             $namespace = $file
                 ->addNamespace($namespaceFile)
-                ->addUse(config('path.namespaces.base.dto'));
+                ->addUse($namespaceBase);
 
             $class = $namespace
                 ->addClass($dto);
 
-            $class->setExtends(config('path.namespaces.base.dto'));
+            $class->setExtends($namespaceBase);
 
             if ($this->properties) {
                 if (Str::contains($dto, 'Collection')) {
@@ -156,7 +160,7 @@ class DTOService
                         }
                     }
 
-                    $path = $this->folder == DTONameEnum::DTO ? config('path.paths.dto') : config('path.paths.filter');
+                    $path = $this->folder == DTONameEnum::OUTPUT ? config('component.paths.output') : config('component.paths.input');
 
                     File::makeDirectory($path . $this->getFolderPath(), 0777, true, true);
 
@@ -166,11 +170,17 @@ class DTOService
         }
     }
 
-    private function createCasterDate()
+    /**
+     * @return void
+     */
+    private function createCasterDate(): void
     {
-        if (!File::exists(config('path.paths.dto') . '\Casters')) {
+        $path = config('component.paths.rootPaths.dto') . '\Casters\Date';
+        $namespace = 'App\\DTO\\Casters\\Date';
+
+        if (!File::exists(config('component.paths.rootPaths.dto') . '\Casters')) {
             File::makeDirectory(
-                config('path.paths.dto') . '\Casters\Date', 0777,
+                $path, 0777,
                 true,
                 true
             );
@@ -179,7 +189,7 @@ class DTOService
         $file = new PhpFile();
 
         $namespace = $file
-            ->addNamespace('App\\DTO\\Casters\\Date')
+            ->addNamespace($namespace)
             ->addUse(Caster::class)
             ->addUse(Carbon::class);
 
@@ -201,9 +211,7 @@ class DTOService
             ->addParameter('value')
             ->setType('mixed');
 
-        File::makeDirectory(config('path.paths.dto') . '\Casters\\Date', 0777, true, true);
-
-        File::put(config('path.paths.dto') . '\Casters\\Date' . DIRECTORY_SEPARATOR . 'CarbonCaster.php', $file);
+        File::put($path . DIRECTORY_SEPARATOR . 'CarbonCaster.php', $file);
     }
 
     /**
@@ -252,17 +260,19 @@ class DTOService
      */
     private function createCollection(string $namespaceFile, string $dto): void
     {
+        $namespaceBase = config('component.namespaces.base.dto') . DIRECTORY_SEPARATOR . config('component.baseFile.dto');
+
         $fileCollection = new PhpFile();
         $namespace = $fileCollection
             ->addNamespace($namespaceFile)
             ->addUse(CastWith::class)
             ->addUse(ArrayCaster::class)
-            ->addUse(config('path.namespaces.base.dto'));
+            ->addUse($namespaceBase);
 
         $classCollection = $namespace
             ->addClass($dto);
 
-        $classCollection->setExtends(config('path.namespaces.base.dto'));
+        $classCollection->setExtends($namespaceBase);
 
         $prop = $classCollection
             ->addProperty('items')
@@ -279,9 +289,9 @@ class DTOService
             ->addComment('@return ' . $prop->getType())
             ->setBody('return $this->' . $prop->getName() . ';');
 
-        File::makeDirectory(config('path.paths.dto') . $this->getFolderPath(), 0777, true, true);
+        File::makeDirectory(config('component.paths.output') . $this->getFolderPath(), 0777, true, true);
 
-        File::put(config('path.paths.dto') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $dto . '.php', $fileCollection);
+        File::put(config('component.paths.output') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $dto . '.php', $fileCollection);
     }
 
     /**
@@ -291,7 +301,7 @@ class DTOService
     {
         $namesFiles = [];
 
-        if ($this->folder == DTONameEnum::FILTER) {
+        if ($this->folder == DTONameEnum::INPUT) {
             foreach ($this->macrossFilters as $macros) {
                 $namesFiles[] = Str::replace(
                     '{{name}}',

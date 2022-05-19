@@ -44,13 +44,13 @@ class ResourceService
      */
     public function createResources(): void
     {
-        $namespaceClass = config('path.namespaces.resource') . $this->getFolderPath();
-
         File::makeDirectory(
-            config('path.paths.resource') . $this->getFolderPath(), 0777,
+            config('component.paths.resource') . $this->getFolderPath(), 0777,
             true,
             true
         );
+
+        $namespaceClass = config('component.namespaces.resource') . $this->getFolderPath();
 
         foreach ($this->methods as $method) {
             $nameClass = Str::ucfirst($method . $this->className() . 'Resource');
@@ -58,7 +58,7 @@ class ResourceService
             $file = $this->generatePHP($nameClass, $namespaceClass);
 
             File::put(
-                config('path.paths.resource') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $nameClass . '.php',
+                config('component.paths.resource') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $nameClass . '.php',
                 $file
             );
         }
@@ -130,10 +130,10 @@ class ResourceService
 
         if ($this->properties) {
             $namespace
-                ->addUse(config('path.namespaces.dto') . $this->argument . 'DTO');
+                ->addUse(config('component.namespaces.output') . $this->argument . 'Output');
 
             $methodClass
-                ->addBody('/** @var ' . $this->className() . 'DTO $this */')
+                ->addBody('/** @var ' . $this->className() . 'Output $this */')
                 ->addBody('return [');
             foreach ($this->properties as $key => $property) {
                 $value = Str::studly($key);

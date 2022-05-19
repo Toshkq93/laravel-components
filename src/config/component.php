@@ -3,17 +3,21 @@
 return [
     'paths' => [
         'repository' => app_path('Repositories'),
-        'dto' => app_path('DTO'),
-        'filter' => app_path('Filters'),
+        'output' => app_path('DTO\\Output'),
+        'input' => app_path('DTO\\Input'),
         'service' => app_path('Services'),
         'controller' => app_path('Http\\Controllers\\API'),
         'request' => app_path('Http\\Requests'),
         'resource' => app_path('Http\\Resources'),
+        'rootPaths' => [
+            'repository' => app_path('Contracts\\Repositories'),
+            'service' => app_path('Contracts\\Services')
+        ],
     ],
     'namespaces' => [
         'repository' => 'App\\Repositories',
-        'dto' => 'App\\DTO',
-        'filter' => 'App\\Filters',
+        'output' => 'App\\DTO\\Output',
+        'input' => 'App\\DTO\\Input',
         'service' => 'App\\Services',
         'controller' => 'App\\Http\\Controllers\\API',
         'request' => 'App\\Http\\Requests',
@@ -26,11 +30,7 @@ return [
             'dto' => 'App\\DTO\\BaseDTO'
         ]
     ],
-    'rootPaths' => [
-        'repository' => app_path('Contracts\\Repositories'),
-        'service' => app_path('Contracts\\Services')
-    ],
     'baseFile' => [
-        'dto' => 'BaseDTO'
+        'dto' => 'BaseDTO',
     ]
 ];

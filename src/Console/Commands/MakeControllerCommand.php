@@ -43,7 +43,7 @@ class MakeControllerCommand extends Command
      */
     public function handle()
     {
-        $baseController = config('path.paths.controller') . 'BaseController.php';
+        $baseController = config('component.paths.controller') . 'BaseController.php';
 
         $this->service->setArgument($this->getNameInput());
         $this->service->setOptions($this->options());

@@ -23,22 +23,31 @@ class RepositoryService
         'show',
         'delete'
     ];
+
     /** @var string */
     private string $argument;
+
     /** @var Application */
     private Application $laravel;
+
     /** @var array|null */
     private null|array $option;
+
     /** @var string */
-    private string $classFilter;
+    private string $classInput;
+
     /** @var string */
-    private string $classDTO;
+    private string $classOutput;
+
     /** @var string */
-    private string $namespaceFilter;
+    private string $namespaceInput;
+
     /** @var string */
-    private string $namespaceDTO;
+    private string $namespaceOutput;
+
     /** @var string */
     private string $name;
+
     /** @var string */
     private string $namespace;
 
@@ -71,9 +80,13 @@ class RepositoryService
      */
     public function createInterface(): void
     {
-        $interface = $this->generatePHPCodeByInterface();
+        File::makeDirectory(
+            config('component.paths.rootPaths.repository') . $this->getFolderPath(), 0777,
+            true,
+            true
+        );
 
-        $this->createFile($interface);
+        $this->generatePHPCodeByInterface();
     }
 
     /**
@@ -81,42 +94,38 @@ class RepositoryService
      */
     public function createRepository(): void
     {
-        $this->name = Str::ucfirst($this->className()) . 'Repository';
-        $this->namespace = config('path.namespaces.repository') . $this->getFolderPath();
-        $model = $this->laravel->make('App\\Models' . $this->argument);
-
-        $classModels = new ReflectionClass(get_class($model));
-
-        $file = $this->generatePHPCodeByFile($classModels);
-
         File::makeDirectory(
-            config('path.paths.repository') . $this->getFolderPath(), 0777,
+            config('component.paths.repository') . $this->getFolderPath(), 0777,
             true,
             true
         );
 
-        File::put(
-            config('path.paths.repository') . DIRECTORY_SEPARATOR . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->name . '.php',
-            $file
-        );
+        $this->name = Str::ucfirst($this->className()) . 'Repository';
+        $this->namespace = config('component.namespaces.repository') . $this->getFolderPath();
+        $model = $this->laravel->make('App\\Models' . $this->argument);
+
+        $classModels = new ReflectionClass(get_class($model));
+
+        $this->generatePHPCodeByFile($classModels);
     }
 
     /**
      * @param ReflectionClass $model
-     * @return PhpFile
+     * @return void
      */
-    private function generatePHPCodeByFile(ReflectionClass $model): PhpFile
+    private function generatePHPCodeByFile(ReflectionClass $model): void
     {
         $file = new PhpFile();
+        $namespaceInterface = $this->getNamespaceInterface() . DIRECTORY_SEPARATOR . $this->getNameInterface();
 
         $namespace = $file
             ->addNamespace($this->namespace)
-            ->addUse($this->getNamespaceInterface() . DIRECTORY_SEPARATOR . $this->getNameInterface())
+            ->addUse($namespaceInterface)
             ->addUse($model->getName());
 
         $class = $namespace
             ->addClass($this->name)
-            ->addImplement($this->getNamespaceInterface() . DIRECTORY_SEPARATOR . $this->getNameInterface());
+            ->addImplement($namespaceInterface);
 
         foreach ($this->methods as $method) {
             $methodFile = $class
@@ -124,22 +133,21 @@ class RepositoryService
                 ->setPublic();
 
             if ($this->option['dto']) {
-                $this->getDataByDTOandFilter($method);
+                $this->getDataByDTO($method);
 
                 $namespace
-                    ->addUse($this->namespaceDTO)
-                    ->addUse($this->namespaceFilter)
+                    ->addUse($this->namespaceOutput)
+                    ->addUse($this->namespaceInput)
                     ->addUse(Collection::class);
 
                 $methodFile
                     ->addComment('@inheritdoc')
                     ->addParameter('filter')
-                    ->setType($this->namespaceFilter);
+                    ->setType($this->namespaceInput);
 
                 $this->addBody($method, $methodFile);
 
                 $this->addReturnByFile($method, $methodFile, $namespace);
-
             }
         }
 
@@ -148,7 +156,10 @@ class RepositoryService
             $this->addMethodToDTOCollection($class);
         }
 
-        return $file;
+        File::put(
+            config('component.paths.repository') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->name . '.php',
+            $file
+        );
     }
 
     /**
@@ -165,20 +176,24 @@ class RepositoryService
         $method
             ->addComment('@param ' . $this->className() . ' $' . Str::lcfirst($this->className()));
         $method
-            ->addComment('@return ' . $this->className() . 'DTO');
+            ->addComment('@return ' . $this->className() . 'Output');
 
         $method
             ->addParameter(Str::lcfirst($this->className()))
             ->setType($model->getName());
 
         $method
-            ->setReturnType(config('path.namespaces.dto') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->className() . 'DTO');
+            ->setReturnType(config('component.namespaces.output') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->className() . 'Output');
 
         $method
-            ->setBody('return new ' . $this->className() . 'DTO($' . Str::lcfirst($this->className()) . '->toArray());');
+            ->setBody('return new ' . $this->className() . 'Output($' . Str::lcfirst($this->className()) . '->toArray());');
     }
 
-    private function addMethodToDTOCollection(ClassType $class)
+    /**
+     * @param ClassType $class
+     * @return void
+     */
+    private function addMethodToDTOCollection(ClassType $class): void
     {
         $methodCollection = $class
             ->addMethod('toDTOCollection')
@@ -187,24 +202,25 @@ class RepositoryService
         $methodCollection
             ->addComment('@param Collection' . ' $' . Str::lcfirst($this->className() . 's'));
         $methodCollection
-            ->addComment('@return ' . $this->className() . 'DTOCollection');
+            ->addComment('@return ' . $this->className() . 'OutputCollection');
 
         $methodCollection
             ->addParameter(Str::lcfirst($this->className()) . 's')
             ->setType(Collection::class);
 
         $methodCollection
-            ->setReturnType(config('path.namespaces.dto') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->className() . 'DTOCollection');
+            ->setReturnType(config('component.namespaces.output') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->className() . 'OutputCollection');
 
         $methodCollection
             ->addBody('$list = [];')
+            ->addBody('')
             ->addBody('foreach ($' . Str::lcfirst($this->className()) . 's as $' . Str::lcfirst($this->className()) . ') {')
             ->addBody('$list[] = $this->toDTO($' . Str::lcfirst($this->className()) . ');')
             ->addBody('}')
             ->addBody('')
             ->addBody('return new ?(
             items: $list
-            );', [new Literal($this->className() . 'DTOCollection')]);
+            );', [new Literal($this->className() . 'OutputCollection')]);
     }
 
     /**
@@ -222,6 +238,7 @@ class RepositoryService
             case 'create':
                 $methodFile
                     ->addBody('$' . Str::lcfirst($this->className()) . ' = ' . $this->className() . '::create((new $filter())->toArray());')
+                    ->addBody('')
                     ->addBody('return $this->toDTO($' . Str::lcfirst($this->className()) . ');');
                 break;
             case 'show':
@@ -231,20 +248,22 @@ class RepositoryService
             case 'update':
                 $methodFile
                     ->addBody('$' . Str::lcfirst($this->className()) . ' = ' . $this->className() . '::findOrFail($filter->getId());')
+                    ->addBody('')
                     ->addBody('return $' . Str::lcfirst($this->className()) . '->update($filter->toArray());');
                 break;
             case 'delete':
                 $methodFile
                     ->addBody('$' . Str::lcfirst($this->className()) . ' = ' . $this->className() . '::findOrFail($filter->getId());')
+                    ->addBody('')
                     ->addBody('return $' . Str::lcfirst($this->className()) . '->delete();');
                 break;
         }
     }
 
     /**
-     * @return PhpFile
+     * @return void
      */
-    private function generatePHPCodeByInterface(): PhpFile
+    private function generatePHPCodeByInterface(): void
     {
         $interface = new PhpFile();
         $namespace = $interface
@@ -260,24 +279,27 @@ class RepositoryService
 
             if ($this->option['dto']) {
 
-                $this->getDataByDTOandFilter($method);
+                $this->getDataByDTO($method);
 
                 $namespace
-                    ->addUse($this->namespaceDTO)
-                    ->addUse($this->namespaceFilter);
+                    ->addUse($this->namespaceOutput)
+                    ->addUse($this->namespaceInput);
 
                 $methodInterface
                     ->addParameter('filter')
-                    ->setType($this->namespaceFilter);
+                    ->setType($this->namespaceInput);
 
                 $methodInterface
-                    ->addComment('@param ' . $this->classFilter . ' $filter');
+                    ->addComment('@param ' . $this->classInput . ' $filter');
 
                 $this->addReturnByInterface($method, $methodInterface, $namespace);
             }
         }
 
-        return $interface;
+        File::put(
+            config('component.paths.rootPaths.repository') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->getNameInterface() . '.php',
+            $interface
+        );
     }
 
     /**
@@ -291,15 +313,15 @@ class RepositoryService
         switch ($method) {
             case 'index':
                 $methodInterface
-                    ->addComment("@return {$this->classDTO}Collection")
-                    ->setReturnType($this->namespaceDTO . 'Collection');
-                $namespace->addUse($this->namespaceDTO . 'Collection');
+                    ->addComment("@return {$this->classOutput}Collection")
+                    ->setReturnType($this->namespaceOutput . 'Collection');
+                $namespace->addUse($this->namespaceOutput . 'Collection');
                 break;
             case 'create':
             case 'show':
                 $methodInterface
-                    ->addComment("@return {$this->classDTO}")
-                    ->setReturnType($this->namespaceDTO);
+                    ->addComment("@return {$this->classOutput}")
+                    ->setReturnType($this->namespaceOutput);
                 break;
             case 'update':
             case 'delete':
@@ -321,13 +343,13 @@ class RepositoryService
         switch ($method) {
             case 'index':
                 $methodInterface
-                    ->setReturnType($this->namespaceDTO . 'Collection');
-                $namespace->addUse($this->namespaceDTO . 'Collection');
+                    ->setReturnType($this->namespaceOutput . 'Collection');
+                $namespace->addUse($this->namespaceOutput . 'Collection');
                 break;
             case 'create':
             case 'show':
                 $methodInterface
-                    ->setReturnType($this->namespaceDTO);
+                    ->setReturnType($this->namespaceOutput);
                 break;
             case 'update':
             case 'delete':
@@ -341,39 +363,21 @@ class RepositoryService
      * @param $method
      * @return void
      */
-    private function getDataByDTOandFilter($method): void
+    private function getDataByDTO($method): void
     {
-        $this->classFilter = Str::ucfirst($method) . $this->className() . 'Filter';
-        $this->namespaceFilter = config('path.namespaces.filter') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->classFilter;
+        $this->classInput = Str::ucfirst($method) . $this->className() . 'Input';
+        $this->namespaceInput = config('component.namespaces.input') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->classInput;
         switch ($method) {
             case 'index':
-                $this->classDTO = $this->className() . 'DTO';
-                $this->namespaceDTO = config('path.namespaces.dto') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->classDTO;
+                $this->classOutput = $this->className() . 'Output';
+                $this->namespaceOutput = config('component.namespaces.output') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->classOutput;
                 break;
             case 'create':
             case 'show':
-                $this->classDTO = $this->className() . 'DTO';
-                $this->namespaceDTO = config('path.namespaces.dto') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->classDTO;
+                $this->classOutput = $this->className() . 'Output';
+                $this->namespaceOutput = config('component.namespaces.output') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->classOutput;
                 break;
         }
-    }
-
-    /**
-     * @param PhpFile $php
-     * @return void
-     */
-    private function createFile(PhpFile $php): void
-    {
-        File::makeDirectory(
-            config('path.rootPaths.repository') . $this->getFolderPath(), 0777,
-            true,
-            true
-        );
-
-        File::put(
-            config('path.rootPaths.repository') . DIRECTORY_SEPARATOR . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->getNameInterface() . '.php',
-            $php
-        );
     }
 
     /**
@@ -389,7 +393,7 @@ class RepositoryService
      */
     private function getNamespaceInterface(): string
     {
-        return Str::beforeLast($this->laravel->getNamespace() . 'Contracts\\Repositories' . $this->argument, '\\');
+        return config('component.namespaces.contracts.repository') . $this->getFolderPath();
     }
 
     /**

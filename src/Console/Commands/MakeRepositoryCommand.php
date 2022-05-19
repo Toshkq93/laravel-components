@@ -17,9 +17,12 @@ class MakeRepositoryCommand extends Command
      */
     protected $signature = 'make:repository
                             {name}
-                            {?--dto}';
+                            {?--dto}
+                            {--choice}';
 
+    /** @var bool  */
     protected $hidden = true;
+
     /**
      * The console command description.
      *
@@ -41,13 +44,13 @@ class MakeRepositoryCommand extends Command
      */
     public function handle()
     {
-        $fileInterface = File::exists(config('path.rootPaths.repository') . $this->getFolderPath() . DIRECTORY_SEPARATOR . "i{$this->className()}Repository.php");
+        $fileInterface = File::exists(config('component.paths.rootPaths.repository') . $this->getFolderPath() . DIRECTORY_SEPARATOR . "i{$this->className()}Repository.php");
 
         $this->service->setArgument($this->getNameInput());
         $this->service->setLaravel($this->laravel);
         $this->service->setOption($this->options());
 
-        if (!$fileInterface) {
+        if (!$fileInterface or $this->option('choice')) {
             $this->service->createInterface();
         }
 
