@@ -11,7 +11,8 @@ return [
         'resource' => app_path('Http\\Resources'),
         'rootPaths' => [
             'repository' => app_path('Contracts\\Repositories'),
-            'service' => app_path('Contracts\\Services')
+            'service' => app_path('Contracts\\Services'),
+            'dto' => app_path('DTO')
         ],
     ],
     'namespaces' => [
@@ -27,10 +28,12 @@ return [
             'service' => 'App\\Contracts\\Services'
         ],
         'base' => [
-            'dto' => 'App\\DTO\\BaseDTO'
+            'dto' => 'App\\DTO',
+            'controller' => 'App\\Http\\Controllers\\API'
         ]
     ],
     'baseFile' => [
         'dto' => 'BaseDTO',
+        'controller' => 'BaseController'
     ]
 ];
