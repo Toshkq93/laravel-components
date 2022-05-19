@@ -1,5 +1,3 @@
-# API Logger
-
 ##  Installation
 
 Install the package via composer
