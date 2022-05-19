@@ -1,8 +1,8 @@
 {
-    "name": "toshkq93/laravel-logger",
-    "description": "logging for laravel src/routes",
+    "name": "toshkq93/laravel-components",
+    "description": "add dtos, requests, resources,controller, repository and service (interface + class) in your project",
     "keywords": ["laravel", "file", "dto", "repository", "service", "request", "resource", "controller"],
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "license": "MIT",
     "authors": [
         {
