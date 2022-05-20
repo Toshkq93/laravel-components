@@ -47,9 +47,7 @@ class MakeServiceCommand extends Command
         $this->service->setArgument($this->getNameInput());
         $this->service->setOption($this->options());
 
-        if ($this->option('choice') or !File::exists(config('component.paths.rootPaths.service') . $this->getFolderPath() . DIRECTORY_SEPARATOR . "i{$this->className()}Service.php")) {
-            $this->service->createInterface();
-        }
+        $this->service->createInterface();
 
         $this->service->createService();
 

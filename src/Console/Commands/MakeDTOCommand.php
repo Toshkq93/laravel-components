@@ -39,11 +39,7 @@ class MakeDTOCommand extends Command
         $this->service->setProperties($this->option('properties'));
         $this->service->setArgument($this->getNameInput());
 
-        if (!File::exists(
-            config('component.paths.rootPaths.dto') . DIRECTORY_SEPARATOR . config('component.baseFile.dto') . '.php'
-        )) {
-            $this->service->createBaseDTO();
-        }
+        $this->service->createBaseDTO();
 
         $this->service->create();
 

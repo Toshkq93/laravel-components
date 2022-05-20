@@ -66,13 +66,15 @@ class Service
      */
     public function createInterface(): void
     {
-        File::makeDirectory(
-            config('component.paths.rootPaths.service') . $this->getFolderPath(), 0777,
-            true,
-            true
-        );
+        if ($this->option['choice'] or !File::exists(config('component.paths.rootPaths.service') . $this->getFolderPath() . DIRECTORY_SEPARATOR . "i{$this->className()}Service.php")) {
+            File::makeDirectory(
+                config('component.paths.rootPaths.service') . $this->getFolderPath(), 0777,
+                true,
+                true
+            );
 
-        $this->generatePHPCodeByInterface();
+            $this->generatePHPCodeByInterface();
+        }
     }
 
     /**
@@ -139,7 +141,7 @@ class Service
                     ->addParameter('filter')
                     ->setType($this->namespaceInput);
 
-                if ($this->option['repository']){
+                if ($this->option['repository']) {
                     $methodFile
                         ->addBody('return $this->repository->' . $method . '($filter);');
                 }
@@ -148,10 +150,37 @@ class Service
             }
         }
 
-        File::put(
+        $file = File::put(
             config('component.paths.service') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->name . '.php',
             $file
         );
+
+        if ($file) {
+            $this->createBind();
+        }
+    }
+
+    /**
+     * @return void
+     */
+    private function createBind(): void
+    {
+        $provider = file(app_path('Providers\\AppServiceProvider.php'));
+
+        $interface = DIRECTORY_SEPARATOR . $this->getNamespaceInterface() . DIRECTORY_SEPARATOR . $this->getNameInterface();
+        $class = DIRECTORY_SEPARATOR . $this->namespace . DIRECTORY_SEPARATOR . $this->name;
+
+        $lineBind = "\t\t" . '$this->app->bind(' . $interface . '::class, ' . $class . '::class);' . PHP_EOL;
+
+        $searchMethod = 'public function boot()';
+
+        foreach ($provider as $key => $line) {
+            if (Str::contains($line, $searchMethod)) {
+                array_splice($provider, $key + 4, 0, $lineBind);
+            }
+        }
+
+        File::put(app_path('Providers\\AppServiceProvider.php'), $provider);
     }
 
     /**

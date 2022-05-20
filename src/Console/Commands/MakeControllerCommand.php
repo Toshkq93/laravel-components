@@ -19,7 +19,7 @@ class MakeControllerCommand extends Command
                             {?--request}
                             {?--dto}';
 
-    /** @var bool  */
+    /** @var bool */
     protected $hidden = true;
 
     /**
@@ -43,14 +43,10 @@ class MakeControllerCommand extends Command
      */
     public function handle()
     {
-        $baseController = config('component.paths.controller') . 'BaseController.php';
-
         $this->service->setArgument($this->getNameInput());
         $this->service->setOptions($this->options());
 
-        if (!File::exists($baseController)){
-            $this->service->createBaseController();
-        }
+        $this->service->createBaseController();
 
         $this->service->create();
 

@@ -6,12 +6,14 @@ use App\Http\Controllers\Controller;
 use File;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Nette\PhpGenerator\ClassType;
 use Nette\PhpGenerator\Method;
 use Nette\PhpGenerator\Parameter;
 use Nette\PhpGenerator\PhpFile;
 use Nette\PhpGenerator\PhpNamespace;
+use Nette\PhpGenerator\PsrPrinter;
 use Toshkq93\Components\Enums\MethodsByClassEnum;
 
 class ControllerService
@@ -55,30 +57,34 @@ class ControllerService
      */
     public function createBaseController(): void
     {
-        $pathFolder = config('component.paths.controller') . $this->getFolderPath();
+        $baseController = config('component.paths.controller') . config('component.baseFile.controller') .'.php';
 
-        if (!File::exists($pathFolder)) {
-            File::makeDirectory(
-                $pathFolder, 0777,
-                true,
-                true
-            );
+        if (!File::exists($baseController)) {
+            $pathFolder = config('component.paths.controller') . $this->getFolderPath();
+
+            if (!File::exists($pathFolder)) {
+                File::makeDirectory(
+                    $pathFolder, 0777,
+                    true,
+                    true
+                );
+            }
+
+            $this->namespaceBaseController = config('component.namespaces.controller');
+
+            $file = new PhpFile();
+
+            $namespace = $file
+                ->addNamespace($this->namespaceBaseController)
+                ->addUse(Controller::class);
+
+            $class = $namespace
+                ->addClass(config('component.baseFile.controller'));
+
+            $class->setExtends(Controller::class);
+
+            File::put(config('component.paths.controller') . '\\' . config('component.baseFile.controller') . '.php', $file);
         }
-
-        $this->namespaceBaseController = config('component.namespaces.controller');
-
-        $file = new PhpFile();
-
-        $namespace = $file
-            ->addNamespace($this->namespaceBaseController)
-            ->addUse(Controller::class);
-
-        $class = $namespace
-            ->addClass(config('component.baseFile.controller'));
-
-        $class->setExtends(Controller::class);
-
-        File::put(config('component.paths.controller') . '\\' . config('component.baseFile.controller') . '.php', $file);
     }
 
     /**
@@ -119,7 +125,54 @@ class ControllerService
             }
         }
 
-        File::put($classPath, $controller);
+        $file = File::put($classPath, $controller);
+
+        if ($file) {
+            $this->createRoute($namespaceClass, $className);
+        }
+    }
+
+    /**
+     * @param string $namespaceClass
+     * @param string $className
+     * @return void
+     */
+    private function createRoute(string $namespaceClass, string $className): void
+    {
+        $fileName = Str::afterLast(config('component.route_path'), '\\');
+
+        if (!File::exists(config('component.route_path'))) {
+            $folder = base_path('routes') . DIRECTORY_SEPARATOR . Str::afterLast(dirname(config('component.route_path')), 'routes\\');
+
+            File::makeDirectory($folder);
+
+            $fileRoute = new PhpFile();
+            $fileRoute->getClasses();
+            $fileRoute->addUse(Route::class);
+            $printer = new PsrPrinter();
+            $data = $printer->printFile($fileRoute);
+
+            File::put($folder . DIRECTORY_SEPARATOR . $fileName, $data);
+        }
+
+        $fileRoute = file(config('component.route_path'));
+
+        $searchLine = Route::class;
+        $class = $namespaceClass . DIRECTORY_SEPARATOR . $className;
+
+        if (Str::contains($fileName, 'api')) {
+            $lineRoute = "\n" . 'Route::apiResource(' . "'/" . Str::snake(Str::plural($this->className()), '-') . "', \\" . $class . "::class);" . PHP_EOL;
+        }else{
+            $lineRoute = "\n" . 'Route::resource(' . "'/" . Str::snake(Str::plural($this->className()), '-') . "', \\" . $class . "::class);" . PHP_EOL;
+        }
+
+        foreach ($fileRoute as $key => $line) {
+            if (Str::contains($line, $searchLine)) {
+                array_splice($fileRoute, $key + 1, 0, $lineRoute);
+            }
+        }
+
+        File::put(config('component.route_path'), $fileRoute);
     }
 
     /**

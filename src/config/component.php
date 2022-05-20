@@ -1,6 +1,16 @@
 <?php
 
 return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Paths
+    |--------------------------------------------------------------------------
+    |
+    | These paths by component's show where the files will be created
+    |
+    */
+
     'paths' => [
         'repository' => app_path('Repositories'),
         'output' => app_path('DTO\\Output'),
@@ -15,6 +25,16 @@ return [
             'dto' => app_path('DTO')
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Namespaces
+    |--------------------------------------------------------------------------
+    |
+    | This namespaces by component's
+    |
+    */
+
     'namespaces' => [
         'repository' => 'App\\Repositories',
         'output' => 'App\\DTO\\Output',
@@ -32,8 +52,28 @@ return [
             'controller' => 'App\\Http\\Controllers\\API'
         ]
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Base files
+    |--------------------------------------------------------------------------
+    |
+    | This base file names
+    |
+    */
+
     'baseFile' => [
         'dto' => 'BaseDTO',
         'controller' => 'BaseController'
-    ]
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | path to route file
+    |--------------------------------------------------------------------------
+    |
+    | This path to route file where generate controller
+    |
+    */
+    'route_path' => base_path('routes\v1\api.php'),
 ];

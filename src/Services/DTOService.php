@@ -70,25 +70,30 @@ class DTOService
      */
     public function createBaseDTO(): void
     {
-        if (!File::exists(config('component.paths.rootPaths.dto'))) {
-            File::makeDirectory(
-                config('component.paths.rootPaths.dto'), 0777,
-                true,
-                true
-            );
+        if (!File::exists(
+            config('component.paths.rootPaths.dto') . DIRECTORY_SEPARATOR . config('component.baseFile.dto') . '.php'
+        )) {
+
+            if (!File::exists(config('component.paths.rootPaths.dto'))) {
+                File::makeDirectory(
+                    config('component.paths.rootPaths.dto'), 0777,
+                    true,
+                    true
+                );
+            }
+
+            $file = new PhpFile();
+
+            $namespace = $file
+                ->addNamespace(config('component.namespaces.base.dto'))
+                ->addUse(DataTransferObject::class);
+
+            $class = $namespace
+                ->addClass(config('component.baseFile.dto'))
+                ->setExtends(DataTransferObject::class);
+
+            File::put(config('component.paths.rootPaths.dto') . DIRECTORY_SEPARATOR . config('component.baseFile.dto') . '.php', $file);
         }
-
-        $file = new PhpFile();
-
-        $namespace = $file
-            ->addNamespace(config('component.namespaces.base.dto'))
-            ->addUse(DataTransferObject::class);
-
-        $class = $namespace
-            ->addClass(config('component.baseFile.dto'))
-            ->setExtends(DataTransferObject::class);
-
-        File::put(config('component.paths.rootPaths.dto') . DIRECTORY_SEPARATOR . config('component.baseFile.dto') . '.php', $file);
     }
 
     /**

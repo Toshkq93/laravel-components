@@ -33,6 +33,10 @@ class ComponentProvider extends ServiceProvider
             __DIR__ . '/../config/component.php', 'component'
         );
 
+        $this->publishes([
+            __DIR__ . '/../config/component.php', 'component.php'
+        ]);
+
         $this->registerCommand();
     }
 

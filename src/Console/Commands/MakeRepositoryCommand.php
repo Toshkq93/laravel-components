@@ -20,7 +20,7 @@ class MakeRepositoryCommand extends Command
                             {?--dto}
                             {--choice}';
 
-    /** @var bool  */
+    /** @var bool */
     protected $hidden = true;
 
     /**
@@ -44,15 +44,11 @@ class MakeRepositoryCommand extends Command
      */
     public function handle()
     {
-        $fileInterface = File::exists(config('component.paths.rootPaths.repository') . $this->getFolderPath() . DIRECTORY_SEPARATOR . "i{$this->className()}Repository.php");
-
         $this->service->setArgument($this->getNameInput());
         $this->service->setLaravel($this->laravel);
         $this->service->setOption($this->options());
 
-        if (!$fileInterface or $this->option('choice')) {
-            $this->service->createInterface();
-        }
+        $this->service->createInterface();
 
         $this->service->createRepository();
 

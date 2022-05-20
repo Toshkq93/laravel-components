@@ -7,6 +7,11 @@ composer require --dev toshkq93/laravel-components
 ```
 ## Usage
 
+Publish the config file with:
+```
+php artisan vendor:publish --provider="Toshkq93\Components\Providers\ComponentProvider"
+```
+
 Go to the root folder of your project and enter the command:
 ```
 php artisam make:components {namespace model} --all
@@ -30,6 +35,11 @@ you can also use other flags in various combination:
 - --service - create service class,
 - --request - create request classes,
 - --repository - create repository class.
+
+After generating services and repositories, bind is automatically added to the container in the App\Provides\AppServiceProvider.
+
+After the controller is generated, a resource route is automatically added depending on the file name (api - apiResource, web - resource). You can also change the path to the 'route_path' route file in the configuration file.
+
 
 ## Security
 

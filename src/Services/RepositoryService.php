@@ -80,13 +80,17 @@ class RepositoryService
      */
     public function createInterface(): void
     {
-        File::makeDirectory(
-            config('component.paths.rootPaths.repository') . $this->getFolderPath(), 0777,
-            true,
-            true
-        );
+        $fileInterface = File::exists(config('component.paths.rootPaths.repository') . $this->getFolderPath() . DIRECTORY_SEPARATOR . "i{$this->className()}Repository.php");
 
-        $this->generatePHPCodeByInterface();
+        if (!$fileInterface or $this->option['choice']) {
+            File::makeDirectory(
+                config('component.paths.rootPaths.repository') . $this->getFolderPath(), 0777,
+                true,
+                true
+            );
+
+            $this->generatePHPCodeByInterface();
+        }
     }
 
     /**
@@ -156,10 +160,37 @@ class RepositoryService
             $this->addMethodToDTOCollection($class);
         }
 
-        File::put(
+        $file = File::put(
             config('component.paths.repository') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->name . '.php',
             $file
         );
+
+        if ($file){
+            $this->createBind();
+        }
+    }
+
+    /**
+     * @return void
+     */
+    private function createBind(): void
+    {
+        $provider = file(app_path('Providers\\AppServiceProvider.php'));
+
+        $interface = DIRECTORY_SEPARATOR . $this->getNamespaceInterface() . DIRECTORY_SEPARATOR . $this->getNameInterface();
+        $class = DIRECTORY_SEPARATOR . $this->namespace . DIRECTORY_SEPARATOR . $this->name;
+
+        $lineBind = "\t\t" . '$this->app->bind(' . $interface . '::class, ' . $class . '::class);' . PHP_EOL;
+
+        $searchMethod = 'public function boot()';
+
+        foreach ($provider as $key => $line) {
+            if (Str::contains($line, $searchMethod)) {
+                array_splice($provider, $key + 2, 0, $lineBind);
+            }
+        }
+
+        File::put(app_path('Providers\\AppServiceProvider.php'), $provider);
     }
 
     /**
