@@ -95,7 +95,7 @@ class ResourceService
             ->addBody('return parent::toArray($request);');
 
         File::put(
-            config('path.paths.resource') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $nameClass . '.php',
+            config('component.paths.resource') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $nameClass . '.php',
             $file
         );
     }

@@ -34,7 +34,7 @@ class ComponentProvider extends ServiceProvider
         );
 
         $this->publishes([
-            __DIR__ . '/../config/component.php', config_path('component.php')
+            __DIR__ . '/../config/component.php' => config_path('component.php')
         ]);
 
         $this->registerCommand();
