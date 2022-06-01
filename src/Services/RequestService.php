@@ -69,6 +69,7 @@ class RequestService
      */
     public function generatePHP(array $requests, string $path): void
     {
+
         $namespaceClass = config('component.namespaces.request') . $this->getFolderPath();
 
         foreach ($requests as $request) {
@@ -83,21 +84,20 @@ class RequestService
 
             $class = $namespace
                 ->addClass($className)
+                ->setFinal()
                 ->setExtends(FormRequest::class);
 
-            $this->createMethods($namespace, $class, $request);
+            $this->createMethods($class);
 
             File::put($filePath, $file);
         }
     }
 
     private function createMethods(
-        PhpNamespace $namespace,
-        ClassType    $class,
-        string       $className
+        ClassType $class,
     )
     {
-        $methodAuthorize = $class
+        $class
             ->addMethod('authorize')
             ->setReturnType('bool')
             ->addComment('@return bool')
@@ -109,86 +109,56 @@ class RequestService
             ->addComment('@return array');
 
         if ($this->properties) {
-            $this->generateMethodsWithProperties($class, $namespace, $methodRules, $className);
+            $this->generateMethodWithProperties($methodRules);
         } else {
             $methodRules
                 ->addBody('return [];');
         }
     }
 
-    private function generateMethodsWithProperties(
-        ClassType    $class,
-        PhpNamespace $namespace,
-        Method       $methodRules,
-        string       $className
-    )
+    /**
+     * @param Method $methodRules
+     * @return void
+     */
+    private function generateMethodWithProperties(
+        Method $methodRules
+    ): void
     {
-        $nameFilter = $className . 'Input';
-        $namespaceFilter = config('component.namespaces.input') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $nameFilter;
-        $className = Str::lcfirst($className);
+        $methodRules
+            ->addBody('return [');
 
-        $namespace
-            ->addUse($namespaceFilter);
+        unset($this->properties['id']);
+        unset($this->properties['created_at']);
 
-        $this->createMethodGetFilterDTO($class, $namespaceFilter, $nameFilter, $className, $methodRules);
-    }
+        foreach ($this->properties as $key => $property) {
 
-    private function createMethodGetFilterDTO(
-        ClassType $class,
-        string    $namespaceFilter,
-        string    $nameFilter,
-        string    $className,
-        Method    $methodRules
-    )
-    {
-        $methodGetDTO = $class
-            ->addMethod('getInputDTO')
-            ->setReturnType($namespaceFilter)
-            ->addComment('@return ' . $nameFilter);
+            $collectionTypes = Str::of($property['type'])->explode('|');
+            $methodRules->addBody("\t'{$key}' => [");
 
-        if (
-            Str::contains($className, MethodsByClassEnum::INDEX) or
-            Str::contains($className, MethodsByClassEnum::CREATE) or
-            Str::contains($className, MethodsByClassEnum::UPDATE)
-        ) {
-            $methodRules
-                ->addBody('return [');
-
-            foreach ($this->properties as $key => $property) {
-                $collectionTypes = Str::of($property['type'])->explode('|');
-                $methodRules->addBody("'{$key}' => [");
-
-                if ($collectionTypes->count() > 1) {
-                    foreach ($collectionTypes as $type) {
-                        if (Str::contains($type, 'Carbon')) {
-                            $methodRules
-                                ->addBody("'date',");
-                        } else {
-                            $methodRules
-                                ->addBody("'{$type}',");
-                        }
+            if ($collectionTypes->count() > 1) {
+                foreach ($collectionTypes as $type) {
+                    if (Str::contains($type, 'Carbon')) {
+                        $methodRules
+                            ->addBody("\t\t'date',");
+                    } elseif (Str::contains($type, 'null')) {
+                        $methodRules
+                            ->addBody("\t\t'nullable',");
+                    } else {
+                        $methodRules
+                            ->addBody("\t\t'{$type}',");
                     }
-                } else {
-                    $methodRules
-                        ->addBody("'{$collectionTypes->first()}'");
                 }
-
-                $methodRules->addBody("],");
+            } else {
+                $methodRules
+                    ->addBody("\t\t'{$collectionTypes->first()}',")
+                    ->addBody("\t\t'required',");
             }
 
-            $methodRules
-                ->addBody('];');
-            $methodGetDTO
-                ->addBody('return new ' . $nameFilter . '($this->validated());');
-        } elseif (
-            Str::contains($className, MethodsByClassEnum::SHOW) or
-            Str::contains($className, MethodsByClassEnum::DELETE)
-        ) {
-            $methodRules
-                ->addBody('return [];');
-            $methodGetDTO
-                ->addBody('return new ' . $nameFilter . '(id: request()->id);');
+            $methodRules->addBody("\t],");
         }
+
+        $methodRules
+            ->addBody('];');
     }
 
     /**
@@ -198,12 +168,8 @@ class RequestService
     {
         $namesFiles = [];
 
-        foreach ($this->fileNames as $request) {
-            $namesFiles[] = Str::replace(
-                '{{name}}',
-                $this->className(),
-                $request
-            );
+        foreach (MethodsByClassEnum::REQUEST_NAMES as $request) {
+            $namesFiles[] = Str::ucfirst($request) . $this->className();
         }
 
         return $namesFiles;

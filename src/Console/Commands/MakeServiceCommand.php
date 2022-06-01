@@ -47,9 +47,9 @@ class MakeServiceCommand extends Command
         $this->service->setArgument($this->getNameInput());
         $this->service->setOption($this->options());
 
-        $this->service->createInterface();
+        $this->service->createBase();
 
-        $this->service->createService();
+        $this->service->create();
 
 
         return self::SUCCESS;

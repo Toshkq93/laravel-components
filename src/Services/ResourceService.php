@@ -10,26 +10,8 @@ use Nette\PhpGenerator\PhpFile;
 
 class ResourceService
 {
-    /** @var array */
-    private array $properties;
-
     /** @var string */
     private string $argument;
-
-    /** @var array|string[] */
-    private array $methods = [
-        'index',
-        'create',
-        'show'
-    ];
-
-    /**
-     * @param array $properties
-     */
-    public function setProperties(array $properties): void
-    {
-        $this->properties = $properties;
-    }
 
     /**
      * @param string $argument
@@ -42,7 +24,7 @@ class ResourceService
     /**
      * @return void
      */
-    public function createResources(): void
+    public function create(): void
     {
         File::makeDirectory(
             config('component.paths.resource') . $this->getFolderPath(), 0777,
@@ -52,16 +34,7 @@ class ResourceService
 
         $namespaceClass = config('component.namespaces.resource') . $this->getFolderPath();
 
-        foreach ($this->methods as $method) {
-            $nameClass = Str::ucfirst($method . $this->className() . 'Resource');
-
-            $file = $this->generatePHP($nameClass, $namespaceClass);
-
-            File::put(
-                config('component.paths.resource') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $nameClass . '.php',
-                $file
-            );
-        }
+        $this->createResource($namespaceClass);
         $this->createCollection($namespaceClass);
     }
 
@@ -72,13 +45,14 @@ class ResourceService
     private function createCollection(string $namespaceClass): void
     {
         $file = new PhpFile();
-        $nameClass = 'Index' . $this->className() . 'Collection';
+        $nameClass = $this->className() . 'Collection';
         $namespace = $file
             ->addNamespace($namespaceClass)
             ->addUse(ResourceCollection::class);
 
         $class = $namespace
             ->addClass($nameClass)
+            ->setFinal()
             ->setExtends(ResourceCollection::class);
 
         $methodClass = $class
@@ -101,12 +75,13 @@ class ResourceService
     }
 
     /**
-     * @param string $method
      * @param string $namespaceClass
-     * @return PhpFile
+     * @return void
      */
-    private function generatePHP(string $nameClass, string $namespaceClass): PhpFile
+    private function createResource(string $namespaceClass): void
     {
+        $nameClass = $this->className() . 'Resource';
+
         $file = new PhpFile();
 
         $namespace = $file
@@ -115,6 +90,7 @@ class ResourceService
 
         $class = $namespace
             ->addClass($nameClass)
+            ->setFinal()
             ->setExtends(JsonResource::class);
 
         $methodClass = $class
@@ -127,28 +103,13 @@ class ResourceService
             ->addComment('@return array|\Illuminate\Contracts\Support\Arrayable|\JsonSerializable')
             ->addParameter('request');
 
+        $methodClass
+            ->addBody('return parent::toArray($request);');
 
-        if ($this->properties) {
-            $namespace
-                ->addUse(config('component.namespaces.output') . $this->argument . 'Output');
-
-            $methodClass
-                ->addBody('/** @var ' . $this->className() . 'Output $this */')
-                ->addBody('return [');
-            foreach ($this->properties as $key => $property) {
-                $value = Str::studly($key);
-
-                $methodClass
-                    ->addBody("'{$key}' => " . '$this->get' . $value . '(),');
-            }
-            $methodClass
-                ->addBody('];');
-        } else {
-            $methodClass
-                ->addBody('return parent::toArray($request);');
-        }
-
-        return $file;
+        File::put(
+            config('component.paths.resource') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $nameClass . '.php',
+            $file
+        );
     }
 
     /**

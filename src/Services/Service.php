@@ -3,47 +3,20 @@
 namespace Toshkq93\Components\Services;
 
 use File;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Nette\PhpGenerator\Method;
 use Nette\PhpGenerator\PhpFile;
-use Illuminate\Foundation\Application;
 use Nette\PhpGenerator\PhpNamespace;
 use Toshkq93\Components\Enums\MethodsByClassEnum;
 
 class Service
 {
-    /** @var array|string[] */
-    private array $methods = [
-        'index',
-        'create',
-        'update',
-        'show',
-        'delete'
-    ];
-
     /** @var string */
     private string $argument;
 
     /** @var array|null */
     private null|array $option;
-
-    /** @var string */
-    private string $classInput;
-
-    /** @var string */
-    private string $classOutput;
-
-    /** @var string */
-    private string $namespaceInput;
-
-    /** @var string */
-    private string $namespaceOutput;
-
-    /** @var string */
-    private string $name;
-
-    /** @var string */
-    private string $namespace;
 
     /**
      * @param string $argument
@@ -64,32 +37,132 @@ class Service
     /**
      * @return void
      */
-    public function createInterface(): void
+    public function createBase(): void
     {
-        if ($this->option['choice'] or !File::exists(config('component.paths.rootPaths.service') . $this->getFolderPath() . DIRECTORY_SEPARATOR . "i{$this->className()}Service.php")) {
+        if ($this->option['choice'] or !File::exists(config('component.paths.rootPaths.service') . $this->getFolderPath() . DIRECTORY_SEPARATOR . "{$this->className()}ServiceInterface.php")) {
             File::makeDirectory(
                 config('component.paths.rootPaths.service') . $this->getFolderPath(), 0777,
                 true,
                 true
             );
 
-            $this->generatePHPCodeByInterface();
+            $this->generateInterface();
+        }
+
+        $pathBaseSerivce = config('component.paths.service') . $this->getFolderPath() . DIRECTORY_SEPARATOR . config('component.baseFile.service') . '.php';
+        if (!File::exists($pathBaseSerivce))
+        {
+            $this->generateBaseService();
         }
     }
 
     /**
      * @return void
      */
-    public function createService(): void
+    private function generateBaseService(): void
+    {
+        $namespaceBaseRepository = $this->getNamespaceBaseRepository() . DIRECTORY_SEPARATOR . $this->getNameBaseRepository();
+
+        $file = new PhpFile();
+
+        $namespace = $file
+            ->addNamespace($this->getNamespaceBaseSerive())
+            ->addUse($namespaceBaseRepository);
+
+        $baseClass = $namespace
+            ->addClass($this->getNameBaseService());
+
+        $construct = $baseClass
+            ->addMethod('__construct');
+
+        $construct
+            ->addPromotedParameter('repository')
+            ->setProtected()
+            ->setType($namespaceBaseRepository);
+
+        foreach (MethodsByClassEnum::SERVICE_METHODS as $method) {
+            $methodFile = $baseClass
+                ->addMethod($method)
+                ->setPublic();
+
+            if ($this->option['dto']) {
+                $this->getDataInputClass($method, $namespace, $methodFile);
+
+                if ($this->option['repository']) {
+                    $this->setBody($method, $methodFile);
+                }
+
+                $this->setReturn($method, $namespace, $methodFile);
+            }
+        }
+
+        File::put(
+            config('component.paths.service') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->getNameBaseService() . '.php',
+            $file
+        );
+    }
+
+    private function setReturn(string $method, PhpNamespace $namespace, Method $methodClass)
+    {
+        $namespaceOutputDto = config('component.namespaces.interface.dto.output') . DIRECTORY_SEPARATOR . 'OutputInterface';
+
+        switch ($method) {
+            case MethodsByClassEnum::ALL:
+                $namespace
+                    ->addUse(Collection::class);
+
+                $methodClass
+                    ->addComment('@return Collection')
+                    ->setReturnType(Collection::class);
+                break;
+            case MethodsByClassEnum::CREATE:
+            case MethodsByClassEnum::SHOW:
+                $namespace
+                    ->addUse($namespaceOutputDto);
+
+                $methodClass
+                    ->addComment('@return OutputInterface')
+                    ->setReturnType($namespaceOutputDto);
+
+                break;
+            case MethodsByClassEnum::UPDATE:
+            case MethodsByClassEnum::DELETE:
+                $methodClass
+                    ->addComment('@return bool')
+                    ->setReturnType('bool');
+                break;
+        }
+    }
+
+    /**
+     * @return void
+     */
+    private function generateInterface(): void
+    {
+        $file = new PhpFile();
+
+        $namespace = $file
+            ->addNamespace($this->getNamespaceInterface());
+
+        $namespace
+            ->addInterface($this->getNameInterface());
+
+        File::put(
+            config('component.paths.rootPaths.service') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->getNameInterface() . '.php',
+            $file
+        );
+    }
+
+    /**
+     * @return void
+     */
+    public function create(): void
     {
         File::makeDirectory(
             config('component.paths.service') . $this->getFolderPath(), 0777,
             true,
             true
         );
-
-        $this->name = Str::ucfirst($this->className()) . 'Service';
-        $this->namespace = config('component.namespaces.service') . $this->getFolderPath();
 
         $this->generatePHPCodeByFile();
     }
@@ -100,58 +173,36 @@ class Service
     private function generatePHPCodeByFile(): void
     {
         $namespaceInterface = $this->getNamespaceInterface() . DIRECTORY_SEPARATOR . $this->getNameInterface();
+        $namespaceBaseService = $this->getNamespaceBaseSerive() . DIRECTORY_SEPARATOR . $this->getNameBaseService();
+        $namespaceRepository = $this->getNamespaceRepositoryInterface() . DIRECTORY_SEPARATOR . $this->getNameRepositoryInterface();
+        $nameRepository = Str::lcfirst($this->className()) . 'Repository';
 
         $file = new PhpFile();
 
         $namespace = $file
-            ->addNamespace($this->namespace)
-            ->addUse($namespaceInterface);
-
+            ->addNamespace($this->getNamespaceService())
+            ->addUse($namespaceInterface)
+            ->addUse($namespaceBaseService)
+            ->addUse($namespaceRepository);
 
         $class = $namespace
-            ->addClass($this->name)
+            ->addClass($this->getNameService())
+            ->setFinal()
+            ->setExtends($namespaceBaseService)
             ->addImplement($namespaceInterface);
 
-        if ($this->option['repository']) {
-            $namespaceRepositoryClass = config('component.namespaces.contracts.repository') . $this->getFolderPath() . DIRECTORY_SEPARATOR . 'i' . $this->className() . 'Repository';
+        $construct = $class
+            ->addMethod('__construct');
 
-            $namespace
-                ->addUse($namespaceRepositoryClass);
-            $class
-                ->addMethod('__construct')
-                ->addPromotedParameter('repository')
-                ->setPrivate()
-                ->setType($namespaceRepositoryClass);
-        }
+        $construct
+            ->addParameter($nameRepository)
+            ->setType($namespaceRepository);
 
-        foreach ($this->methods as $method) {
-            $methodFile = $class
-                ->addMethod($method)
-                ->setPublic();
-
-            if ($this->option['dto']) {
-                $this->getDataByDTOandFilter($method);
-
-                $namespace
-                    ->addUse($this->namespaceOutput)
-                    ->addUse($this->namespaceInput);
-
-                $methodFile
-                    ->addComment('@inheritdoc')
-                    ->addParameter('filter')
-                    ->setType($this->namespaceInput);
-
-                if ($this->option['repository']) {
-                    $methodFile
-                        ->addBody('return $this->repository->' . $method . '($filter);');
-                }
-
-                $this->addReturnByFile($method, $methodFile, $namespace);
-            }
-        }
+        $construct
+            ->addBody('parent::__construct($' . $nameRepository . ');');
 
         $file = File::put(
-            config('component.paths.service') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->name . '.php',
+            config('component.paths.service') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->getNameService() . '.php',
             $file
         );
 
@@ -168,7 +219,7 @@ class Service
         $provider = file(app_path('Providers\\AppServiceProvider.php'));
 
         $interface = DIRECTORY_SEPARATOR . $this->getNamespaceInterface() . DIRECTORY_SEPARATOR . $this->getNameInterface();
-        $class = DIRECTORY_SEPARATOR . $this->namespace . DIRECTORY_SEPARATOR . $this->name;
+        $class = DIRECTORY_SEPARATOR . $this->getNamespaceService() . DIRECTORY_SEPARATOR . $this->getNameService();
 
         $lineBind = "\t\t" . '$this->app->bind(' . $interface . '::class, ' . $class . '::class);' . PHP_EOL;
 
@@ -176,7 +227,7 @@ class Service
 
         foreach ($provider as $key => $line) {
             if (Str::contains($line, $searchMethod)) {
-                array_splice($provider, $key + 4, 0, $lineBind);
+                array_splice($provider, $key + 2, 0, $lineBind);
             }
         }
 
@@ -184,123 +235,80 @@ class Service
     }
 
     /**
-     * @return void
-     */
-    private function generatePHPCodeByInterface(): void
-    {
-        $interface = new PhpFile();
-
-        $namespace = $interface
-            ->addNamespace($this->getNamespaceInterface());
-
-        $interfaceFile = $namespace
-            ->addInterface($this->getNameInterface());
-
-        foreach ($this->methods as $method) {
-            $methodInterface = $interfaceFile
-                ->addMethod($method)
-                ->setPublic();
-
-            if ($this->option['dto']) {
-
-                $this->getDataByDTOandFilter($method);
-
-                $namespace
-                    ->addUse($this->namespaceOutput)
-                    ->addUse($this->namespaceInput);
-
-                $methodInterface
-                    ->addParameter('filter')
-                    ->setType($this->namespaceInput);
-
-                $methodInterface
-                    ->addComment('@param ' . $this->classInput . ' $filter');
-
-                $this->addReturnByInterface($method, $methodInterface, $namespace);
-            }
-        }
-
-        File::put(
-            config('component.paths.rootPaths.service') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->getNameInterface() . '.php',
-            $interface
-        );
-    }
-
-    /**
-     * @param string $method
-     * @param Method $methodInterface
-     * @param PhpNamespace $namespace
-     * @return void
-     */
-    private function addReturnByInterface(string $method, Method $methodInterface, PhpNamespace $namespace): void
-    {
-        switch ($method) {
-            case MethodsByClassEnum::INDEX:
-                $methodInterface
-                    ->addComment("@return {$this->classOutput}Collection")
-                    ->setReturnType($this->namespaceOutput . 'Collection');
-                $namespace->addUse($this->namespaceOutput . 'Collection');
-                break;
-            case MethodsByClassEnum::CREATE:
-            case MethodsByClassEnum::SHOW:
-                $methodInterface
-                    ->addComment("@return {$this->classOutput}")
-                    ->setReturnType($this->namespaceOutput);
-                break;
-            case MethodsByClassEnum::UPDATE:
-            case MethodsByClassEnum::DELETE:
-                $methodInterface
-                    ->addComment("@return bool")
-                    ->setReturnType('bool');
-                break;
-        }
-    }
-
-    /**
-     * @param string $method
-     * @param Method $methodInterface
-     * @param PhpNamespace $namespace
-     * @return void
-     */
-    private function addReturnByFile(string $method, Method $methodInterface, PhpNamespace $namespace): void
-    {
-        switch ($method) {
-            case MethodsByClassEnum::INDEX:
-                $methodInterface
-                    ->setReturnType($this->namespaceOutput . 'Collection');
-                $namespace->addUse($this->namespaceOutput . 'Collection');
-                break;
-            case MethodsByClassEnum::CREATE:
-            case MethodsByClassEnum::SHOW:
-                $methodInterface
-                    ->setReturnType($this->namespaceOutput);
-                break;
-            case MethodsByClassEnum::UPDATE:
-            case MethodsByClassEnum::DELETE:
-                $methodInterface
-                    ->setReturnType('bool');
-                break;
-        }
-    }
-
-    /**
      * @param $method
      * @return void
      */
-    private function getDataByDTOandFilter($method): void
+    private function getDataInputClass(string $method, PhpNamespace $namespace, Method $methodClass): void
     {
-        $this->classInput = Str::ucfirst($method) . $this->className() . 'Input';
-        $this->namespaceInput = config('component.namespaces.input') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->classInput;
-
         switch ($method) {
-            case 'index':
-                $this->classOutput = $this->className() . 'Output';
-                $this->namespaceOutput = config('component.namespaces.output') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->classOutput;
+            case MethodsByClassEnum::CREATE:
+                $namespaceInput = config('component.namespaces.interface.dto.input') . $this->getFolderPath() . DIRECTORY_SEPARATOR . 'CreateInputInterface';
+
+                $namespace
+                    ->addUse($namespaceInput);
+
+                $methodClass
+                    ->addComment('@param CreateInputInterface $dto')
+                    ->addParameter('dto')
+                    ->setType($namespaceInput);
+
                 break;
-            case 'create':
-            case 'show':
-                $this->classOutput = $this->className() . 'Output';
-                $this->namespaceOutput = config('component.namespaces.output') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->classOutput;
+            case MethodsByClassEnum::UPDATE:
+                $namespaceInput = config('component.namespaces.interface.dto.input') . $this->getFolderPath() . DIRECTORY_SEPARATOR . 'UpdateInputInterface';
+
+                $namespace
+                    ->addUse($namespaceInput);
+
+                $methodClass
+                    ->addComment('@param UpdateInputInterface $dto')
+                    ->addParameter('dto')
+                    ->setType($namespaceInput);
+
+                $methodClass
+                    ->addComment('@param int $id')
+                    ->addParameter('id')
+                    ->setType('int');
+
+                break;
+            case MethodsByClassEnum::SHOW:
+            case MethodsByClassEnum::DELETE:
+                $methodClass
+                    ->addComment('@param int $id')
+                    ->addParameter('id')
+                    ->setType('int');
+                break;
+        }
+    }
+
+    /**
+     * @param string $method
+     * @param Method $methodFile
+     * @return void
+     */
+    private function setBody(string $method, Method $methodFile): void
+    {
+        switch ($method) {
+            case MethodsByClassEnum::ALL:
+                $methodFile
+                    ->addBody('return $this->repository->' . MethodsByClassEnum::ALL . '();');
+                break;
+            case MethodsByClassEnum::CREATE:
+                $methodFile
+                    ->addBody('return $this->repository->' . MethodsByClassEnum::CREATE . '($dto);');
+                break;
+            case MethodsByClassEnum::SHOW:
+                $methodFile
+                    ->addBody('return $this->repository->' . MethodsByClassEnum::SHOW . '($id);');
+                break;
+            case MethodsByClassEnum::UPDATE:
+                $methodFile
+                    ->setReturnType('bool')
+                    ->addBody('return $this->repository->' . MethodsByClassEnum::UPDATE . '($dto, $id);');
+                break;
+            case MethodsByClassEnum::DELETE:
+                $methodFile
+                    ->setReturnType('bool')
+                    ->addBody('return $this->repository->' . MethodsByClassEnum::DELETE . '($id);');
                 break;
         }
     }
@@ -318,7 +326,7 @@ class Service
      */
     private function getNamespaceInterface(): string
     {
-        return config('component.namespaces.contracts.service') . $this->getFolderPath();
+        return config('component.namespaces.interface.service') . $this->getFolderPath();
     }
 
     /**
@@ -326,7 +334,65 @@ class Service
      */
     private function getNameInterface(): string
     {
-        return 'i' . Str::ucfirst($this->className()) . 'Service';
+        return Str::ucfirst($this->className()) . 'ServiceInterface';
+    }
+
+    /**
+     * @return string
+     */
+    private function getNamespaceService(): string
+    {
+        return config('component.namespaces.service') . $this->getFolderPath();
+    }
+
+    /**
+     * @return string
+     */
+    private function getNameService(): string
+    {
+        return Str::ucfirst($this->className()) . 'Service';
+    }
+
+    /**
+     * @return string
+     */
+    private function getNamespaceBaseSerive(): string
+    {
+        return config('component.namespaces.base.service');
+    }
+
+    /**
+     * @return string
+     */
+    private function getNameBaseService(): string
+    {
+        return config('component.baseFile.service');
+    }
+
+    /**
+     * @return string
+     */
+    private function getNamespaceRepositoryInterface(): string
+    {
+        return config('component.namespaces.interface.repository') . $this->getFolderPath();
+    }
+
+    /**
+     * @return string
+     */
+    private function getNameRepositoryInterface(): string
+    {
+        return Str::ucfirst($this->className()) . 'RepositoryInterface';
+    }
+
+    private function getNameBaseRepository(): string
+    {
+        return config('component.baseFile.repository');
+    }
+
+    private function getNamespaceBaseRepository(): string
+    {
+        return config('component.namespaces.base.repository');
     }
 
     /**

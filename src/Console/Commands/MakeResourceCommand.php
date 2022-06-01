@@ -13,8 +13,7 @@ class MakeResourceCommand extends Command
      * @var string
      */
     protected $signature = 'create:resource
-                            {name}
-                            {--properties=}';
+                            {name}';
 
     /** @var bool  */
     protected $hidden = true;
@@ -41,9 +40,8 @@ class MakeResourceCommand extends Command
     public function handle()
     {
         $this->service->setArgument($this->getNameInput());
-        $this->service->setProperties($this->option('properties'));
 
-        $this->service->createResources();
+        $this->service->create();
 
         return 0;
     }

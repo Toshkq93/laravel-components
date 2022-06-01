@@ -48,9 +48,9 @@ class MakeRepositoryCommand extends Command
         $this->service->setLaravel($this->laravel);
         $this->service->setOption($this->options());
 
-        $this->service->createInterface();
+        $this->service->createBase();
 
-        $this->service->createRepository();
+        $this->service->create();
 
 
         return self::SUCCESS;

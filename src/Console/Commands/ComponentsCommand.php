@@ -38,6 +38,7 @@ class ComponentsCommand extends GeneratorCommand
      * @var string
      */
     protected $description = 'Create DTOs, service, repository, controller, resources, requests';
+
     /** @var string */
     private string $path;
 
@@ -54,8 +55,8 @@ class ComponentsCommand extends GeneratorCommand
      */
     public function handle(): bool
     {
-        if ($this->isReservedName($this->getNameInput())) {
-            $this->error('The name "' . $this->getNameInput() . '" is reserved by PHP.');
+        if ($this->isReservedName($this->className())) {
+            $this->error('The name "' . $this->className() . '" is reserved by PHP.');
             return self::FAILURE;
         }
 
@@ -74,13 +75,12 @@ class ComponentsCommand extends GeneratorCommand
             $this->input->setOption('request', true);
             $this->input->setOption('controller', true);
         }
-        $class = new ReflectionClass(get_class($model));
+        $class = new ReflectionClass($model);
 
         $this->path = Str::studly(Str::after(dirname($class->getFileName()), 'Models'));
 
         if ($this->option('dto')) {
             $properties = $this->service->getProperties($model);
-
             if (!$properties) {
                 $table = ($model)->getTable();
                 $this->error("Table {$table} not found. Please create migration and use php artisan migrate");
@@ -99,8 +99,7 @@ class ComponentsCommand extends GeneratorCommand
         }
 
         if ($this->option('resource')) {
-            $properties = $properties ?? [];
-            $this->createResource($properties);
+            $this->createResource();
         }
 
         if ($this->option('request')) {
@@ -150,8 +149,8 @@ class ComponentsCommand extends GeneratorCommand
     {
         $result = false;
 
-        if (File::exists(config('component.paths.rootPaths.repository') . $this->path . DIRECTORY_SEPARATOR . "i{$this->className()}Repository.php")){
-            $result = $this->confirm('File i' . $this->className() . 'Repository exist, do you want rewrite this file?', true);
+        if (File::exists(config('component.paths.rootPaths.repository') . $this->path . DIRECTORY_SEPARATOR . "{$this->className()}RepositoryInterface.php")) {
+            $result = $this->confirm('File ' . $this->className() . 'RepositoryInterface exist, do you want rewrite this file?', true);
         }
 
         Artisan::call('make:repository', [
@@ -170,8 +169,8 @@ class ComponentsCommand extends GeneratorCommand
     {
         $result = false;
 
-        if (File::exists(config('component.paths.rootPaths.service') . $this->path . DIRECTORY_SEPARATOR . "i{$this->className()}Service.php")){
-            $result = $this->confirm('File i' . $this->className() . 'Service exist, do you want rewrite this file?', true);
+        if (File::exists(config('component.paths.rootPaths.service') . $this->path . DIRECTORY_SEPARATOR . "{$this->className()}ServiceInterface.php")) {
+            $result = $this->confirm('File ' . $this->className() . 'ServiceInterface exist, do you want rewrite this file?', true);
         }
 
 
@@ -186,14 +185,12 @@ class ComponentsCommand extends GeneratorCommand
     }
 
     /**
-     * @param $properties
      * @return void
      */
-    private function createResource($properties): void
+    private function createResource(): void
     {
         Artisan::call('create:resource', [
             'name' => "{$this->classPath()}",
-            '--properties' => $properties
         ]);
         $path = 'app\\Http\\Resources' . $this->classPath();
 
@@ -244,7 +241,7 @@ class ComponentsCommand extends GeneratorCommand
      */
     private function className(): string
     {
-        return class_basename($this->argument('name'));
+        return class_basename($this->getNameInput());
     }
 
     /**

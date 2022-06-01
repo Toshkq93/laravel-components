@@ -3,27 +3,22 @@
 namespace Toshkq93\Components\Services;
 
 use Doctrine\DBAL\Exception as DBALException;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Date;
 
 class ModelService
 {
     /** @var string */
     private string $dateClass;
-    /** @var string */
-    private string $namespaceModel;
+
     /** @var array */
     private array $properties = [];
-    /** @var array|string[] */
-    private array $ignoredPropeties = [
-        'updated_at',
-        'deleted_at'
-    ];
 
     /**
+     * @param Model $model
      * @return array
-     * @throws DBALException
      */
-    public function getProperties($model): array
+    public function getProperties(Model $model): array
     {
         $hasDoctrine = interface_exists('Doctrine\DBAL\Driver');
 
@@ -39,10 +34,11 @@ class ModelService
     }
 
     /**
-     * @param $model
+     * @param Model $model
      * @return void
+     * @throws DBALException
      */
-    public function getPropertiesFromTable($model): void
+    public function getPropertiesFromTable(Model $model): void
     {
         $table = $model->getConnection()->getTablePrefix() . $model->getTable();
         $schema = $model->getConnection()->getDoctrineSchemaManager();
@@ -77,6 +73,7 @@ class ModelService
                     case 'datetimetz':
                     case 'datetime':
                     case 'decimal':
+                    case 'float':
                         $type = 'string';
                         break;
                     case 'integer':
@@ -95,9 +92,6 @@ class ModelService
                                 break;
                         }
                         break;
-                    case 'float':
-                        $type = 'float';
-                        break;
                     default:
                         $type = 'mixed';
                         break;
@@ -108,7 +102,7 @@ class ModelService
                 $this->nullableColumns[$name] = true;
             }
 
-            if (!in_array($name, $this->ignoredPropeties)) {
+            if (!in_array($name, config('component.ignore_properties'))) {
                 $this->setProperty(
                     $name,
                     $type,
@@ -140,6 +134,5 @@ class ModelService
             }
             $this->properties[$name]['type'] = $newType;
         }
-        $this->properties[$name]['isPrimary'] = $isPrimary;
     }
 }

@@ -13,17 +13,34 @@ return [
 
     'paths' => [
         'repository' => app_path('Repositories'),
-        'output' => app_path('DTO\\Output'),
-        'input' => app_path('DTO\\Input'),
+        'output' => app_path('DTO\Output'),
+        'input' => app_path('DTO\Input'),
         'service' => app_path('Services'),
-        'controller' => app_path('Http\\Controllers\\API'),
-        'request' => app_path('Http\\Requests'),
-        'resource' => app_path('Http\\Resources'),
+        'controller' => app_path('Http\Controllers\API'),
+        'request' => app_path('Http\Requests'),
+        'resource' => app_path('Http\Resources'),
         'rootPaths' => [
-            'repository' => app_path('Contracts\\Repositories'),
-            'service' => app_path('Contracts\\Services'),
-            'dto' => app_path('DTO')
+            'repository' => app_path('Repositories\Interfaces'),
+            'service' => app_path('Services\Interfaces'),
+            'dto' => [
+                'input' => app_path('DTO\Input\Interfaces'),
+                'output' => app_path('DTO\Output\Interfaces')
+            ]
         ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | ignore properties
+    |--------------------------------------------------------------------------
+    |
+    | This properties ignored, when generate dto, requests and resources
+    |
+    */
+
+    'ignore_properties' => [
+        'updated_at',
+        'deleted_at'
     ],
 
     /*
@@ -36,20 +53,26 @@ return [
     */
 
     'namespaces' => [
-        'repository' => 'App\\Repositories',
-        'output' => 'App\\DTO\\Output',
-        'input' => 'App\\DTO\\Input',
-        'service' => 'App\\Services',
-        'controller' => 'App\\Http\\Controllers\\API',
-        'request' => 'App\\Http\\Requests',
-        'resource' => 'App\\Http\\Resources',
-        'contracts' => [
-            'repository' => 'App\\Contracts\\Repositories',
-            'service' => 'App\\Contracts\\Services'
+        'repository' => 'App\Repositories',
+        'output' => 'App\DTO\Output',
+        'input' => 'App\DTO\Input',
+        'service' => 'App\Services',
+        'controller' => 'App\Http\Controllers\API',
+        'request' => 'App\Http\Requests',
+        'resource' => 'App\Http\Resources',
+        'interface' => [
+            'repository' => 'App\Repositories\Interfaces',
+            'service' => 'App\Services\Interfaces',
+            'dto' => [
+                'input' => 'App\DTO\Input\Interfaces',
+                'output' => 'App\DTO\Output\Interfaces'
+            ]
         ],
         'base' => [
-            'dto' => 'App\\DTO',
-            'controller' => 'App\\Http\\Controllers\\API'
+            'dto' => 'App\DTO',
+            'controller' => 'App\Http\Controllers\API',
+            'repository' => 'App\Repositories',
+            'service' => 'App\Services'
         ]
     ],
 
@@ -64,7 +87,9 @@ return [
 
     'baseFile' => [
         'dto' => 'BaseDTO',
-        'controller' => 'BaseController'
+        'controller' => 'BaseController',
+        'repository' => 'BaseRepository',
+        'service' => 'BaseService'
     ],
 
     /*
