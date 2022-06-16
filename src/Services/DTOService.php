@@ -6,6 +6,7 @@ use App\DTO\Input\Interfaces\CreateInputInterface;
 use App\DTO\Input\Interfaces\UpdateInputInterface;
 use App\DTO\Output\Interfaces\OutputInterface;
 use File;
+use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Nette\PhpGenerator\Literal;
@@ -17,16 +18,13 @@ use Toshkq93\Components\Enums\DTONameEnum;
 use App\DTO\Casters\Date\CarbonCaster;
 use Toshkq93\Components\Enums\MethodsByClassEnum;
 
-class DTOService
+class DTOService extends BaseServiceCreateClass
 {
     /** @var string */
     private string $folder;
 
     /** @var array */
     private array $properties;
-
-    /** @var string */
-    private string $argument;
 
     /** @var array|string[] */
     private array $macrossFilters = [
@@ -56,20 +54,12 @@ class DTOService
     }
 
     /**
-     * @param string $argument
-     */
-    public function setArgument(string $argument): void
-    {
-        $this->argument = $argument;
-    }
-
-    /**
      * @return void
      */
     public function createBaseDTO(): void
     {
         if (!File::exists(
-            app_path('DTO') . DIRECTORY_SEPARATOR . config('component.baseFile.dto') . '.php'
+            app_path('DTO') . DIRECTORY_SEPARATOR . $this->getNameBaseDto() . '.php'
         )) {
 
             if (!File::exists(app_path('DTO'))) {
@@ -84,21 +74,16 @@ class DTOService
             $file = new PhpFile();
 
             $namespace = $file
-                ->addNamespace(config('component.namespaces.base.dto'))
+                ->addNamespace('App\DTO')
                 ->addUse(DataTransferObject::class);
 
-            $class = $namespace
-                ->addClass(config('component.baseFile.dto'))
+            $namespace
+                ->addClass($this->getNameBaseDto())
                 ->setExtends(DataTransferObject::class);
 
-            File::put(app_path('DTO') . DIRECTORY_SEPARATOR . config('component.baseFile.dto') . '.php', $file);
+            File::put(app_path('DTO') . DIRECTORY_SEPARATOR . $this->getNameBaseDto() . '.php', $file);
         }
 
-        $this->createInterface();
-    }
-
-    private function createInterface()
-    {
         if (!File::exists(app_path('DTO') . DIRECTORY_SEPARATOR . Str::ucfirst($this->folder) . DIRECTORY_SEPARATOR . 'Interfaces')) {
             File::makeDirectory(
                 app_path('DTO') . DIRECTORY_SEPARATOR . Str::ucfirst($this->folder) . DIRECTORY_SEPARATOR . 'Interfaces',
@@ -107,34 +92,25 @@ class DTOService
                 true
             );
 
-            if ($this->folder == DTONameEnum::INPUT){
-                $namespaceInputDTO = config('component.namespaces.interface.dto.input') . $this->getFolderPath();
-
-                foreach (MethodsByClassEnum::DTO_INPUT_NAMES as $dto) {
-                    $file = new PhpFile();
-
-                    $namespace = $file->addNamespace($namespaceInputDTO);
-
-                    $nameInterface = Str::ucfirst($dto) . 'InputInterface';
-
-                    $namespace
-                        ->addInterface($nameInterface);
-
-                    File::put(config('component.paths.rootPaths.dto.input') . DIRECTORY_SEPARATOR . $nameInterface . '.php', $file);
-                }
-            }else{
-                $namespaceInputDTO = config('component.namespaces.interface.dto.output') . $this->getFolderPath();
-                $nameInterface = 'OutputInterface';
-                $file = new PhpFile();
-
-                $namespace = $file
-                    ->addNamespace($namespaceInputDTO);
-
-                $namespace->addInterface($nameInterface);
-
-                File::put(config('component.paths.rootPaths.dto.output') . DIRECTORY_SEPARATOR . $nameInterface . '.php', $file);
-            }
+            $this->createInterface();
         }
+    }
+
+    /**
+     * @return void
+     */
+    private function createInterface(): void
+    {
+        $namespaceInputDTO = $this->getNamespaceDtoOutputInterface();
+        $nameInterface = config('component.prefix.dto.output') . config('component.prefix.interface');
+        $file = new PhpFile();
+
+        $namespace = $file
+            ->addNamespace($namespaceInputDTO);
+
+        $namespace->addInterface($nameInterface);
+
+        File::put(config('component.paths.interface.dto.output') . DIRECTORY_SEPARATOR . $nameInterface . '.php', $file);
     }
 
     /**
@@ -144,75 +120,47 @@ class DTOService
     {
         $this->createCasterDate();
 
-        $namespaceFile = ($this->folder == DTONameEnum::OUTPUT ? config('component.namespaces.output') : config('component.namespaces.input')) . $this->getFolderPath();
-        $namespaceBase = config('component.namespaces.base.dto') . DIRECTORY_SEPARATOR . config('component.baseFile.dto');
+        File::makeDirectory(
+            config('component.paths.output') . DIRECTORY_SEPARATOR . $this->getFolderPathByDto(),
+            0777,
+            true,
+            true
+        );
 
-        if ($this->folder == DTONameEnum::INPUT) {
-            unset($this->properties['id']);
-            unset($this->properties['created_at']);
-        }
+        $file = new PhpFile();
 
-        foreach ($this->replaceRealNames() as $dto) {
-            $file = new PhpFile();
+        $nameDTO = $this->getClassName() . config('component.prefix.dto.output');
+        $namespaceInterface = $this->getNamespaceDtoOutputInterface() . DIRECTORY_SEPARATOR . config('component.prefix.dto.output') . config('component.prefix.interface');
 
-            $namespace = $file
-                ->addNamespace($namespaceFile)
-                ->addUse($namespaceBase);
+        $namespace = $file
+            ->addNamespace($this->getNamespaceDtoOutput())
+            ->addUse($namespaceInterface)
+            ->addUse($this->getNamespaceBaseDto());
 
-            $class = $namespace
-                ->addClass($dto)
-                ->setFinal();
+        $class = $namespace
+            ->addClass($nameDTO)
+            ->setExtends($this->getNamespaceBaseDto())
+            ->addImplement($namespaceInterface)
+            ->setFinal();
 
-            $class->setExtends($namespaceBase);
-
-            if ($this->folder == DTONameEnum::INPUT && Str::contains($dto, 'Create')) {
-                $namespace
-                    ->addUse(CreateInputInterface::class);
-
-                $class
-                    ->addImplement(CreateInputInterface::class);
-            }elseif ($this->folder == DTONameEnum::INPUT && Str::contains($dto, 'Update')){
-                $namespace
-                    ->addUse(UpdateInputInterface::class);
-
-                $class
-                    ->addImplement(UpdateInputInterface::class);
-            }else{
-                $namespace
-                    ->addUse(OutputInterface::class);
-
-                $class
-                    ->addImplement(OutputInterface::class);
+        foreach ($this->properties as $property => $values) {
+            if (Str::contains($values['type'], Carbon::class)) {
+                $namespace->addUse(Carbon::class);
             }
 
-            if ($this->properties) {
-                foreach ($this->properties as $property => $values) {
+            $propertyNew = $class
+                ->addProperty($property)
+                ->setType($values['type'])
+                ->setPublic();
 
-                    if (Str::contains($values['type'], Carbon::class)) {
-                        $namespace->addUse(Carbon::class);
-                    }
-
-                    $property = Str::lcfirst(Str::studly($property));
-
-                    $propertyNew = $class
-                        ->addProperty($property)
-                        ->setType($values['type'])
-                        ->setPublic();
-
-                    if (Str::contains($values['type'], Carbon::class)) {
-                        $namespace->addUse(CastWith::class);
-                        $namespace->addUse(CarbonCaster::class);
-                        $propertyNew->addAttribute(CastWith::class, [new Literal('CarbonCaster::class')]);
-                    }
-                }
-
-                $path = $this->folder == DTONameEnum::OUTPUT ? config('component.paths.output') : config('component.paths.input');
-
-                File::makeDirectory($path . $this->getFolderPath(), 0777, true, true);
-
-                File::put($path . $this->getFolderPath() . DIRECTORY_SEPARATOR . $dto . '.php', $file);
+            if (Str::contains($values['type'], Carbon::class)) {
+                $namespace->addUse(CastWith::class);
+                $namespace->addUse(CarbonCaster::class);
+                $propertyNew->addAttribute(CastWith::class, [new Literal('CarbonCaster::class')]);
             }
         }
+
+        File::put(config('component.paths.output') . DIRECTORY_SEPARATOR . $this->getFolderPathByDto() . DIRECTORY_SEPARATOR . $nameDTO . '.php', $file);
     }
 
     /**
@@ -221,11 +169,12 @@ class DTOService
     private function createCasterDate(): void
     {
         $path = app_path('DTO') . '\Casters\Date';
-        $namespace = 'App\\DTO\\Casters\\Date';
+        $namespace = 'App\DTO\Casters\Date';
 
         if (!File::exists(app_path('DTO') . '\Casters')) {
             File::makeDirectory(
-                $path, 0777,
+                $path,
+                0777,
                 true,
                 true
             );
@@ -257,49 +206,5 @@ class DTOService
             ->setType('mixed');
 
         File::put($path . DIRECTORY_SEPARATOR . 'CarbonCaster.php', $file);
-    }
-
-    /**
-     * @return array
-     */
-    private function replaceRealNames(): array
-    {
-        $namesFiles = [];
-
-        if ($this->folder == DTONameEnum::INPUT) {
-            foreach ($this->macrossFilters as $macros) {
-                $namesFiles[] = Str::replace(
-                    '{{name}}',
-                    $this->className(),
-                    $macros
-                );
-            }
-        } else {
-            foreach ($this->macrossDTO as $macros) {
-                $namesFiles[] = Str::replace(
-                    '{{name}}',
-                    $this->className(),
-                    $macros
-                );
-            }
-        }
-
-        return $namesFiles;
-    }
-
-    /**
-     * @return string
-     */
-    private function getFolderPath(): string
-    {
-        return Str::beforeLast($this->argument, '\\');
-    }
-
-    /**
-     * @return string
-     */
-    private function className(): string
-    {
-        return class_basename($this->argument);
     }
 }

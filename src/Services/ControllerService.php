@@ -16,66 +16,17 @@ use Nette\PhpGenerator\PhpNamespace;
 use Nette\PhpGenerator\PsrPrinter;
 use Toshkq93\Components\Enums\MethodsByClassEnum;
 
-class ControllerService
+class ControllerService extends BaseServiceCreateClass
 {
-    /** @var string */
-    private string $argument;
-
-    /** @var array|null */
-    private null|array $options;
-
-    /** @var string */
-    private string $namespaceBaseController;
+    private array $primaryKey;
 
     /**
-     * @param string $argument
-     */
-    public function setArgument(string $argument): void
-    {
-        $this->argument = $argument;
-    }
-
-    /**
-     * @param array|null $option
-     */
-    public function setOptions(?array $options): void
-    {
-        $this->options = $options;
-    }
-
-    /**
+     * @param array $primaryKey
      * @return void
      */
-    public function createBaseController(): void
+    public function setPrimaryKey(array $primaryKey): void
     {
-        $baseController = config('component.paths.controller') . config('component.baseFile.controller') . '.php';
-
-        if (!File::exists($baseController)) {
-            $pathFolder = config('component.paths.controller') . $this->getFolderPath();
-
-            if (!File::exists($pathFolder)) {
-                File::makeDirectory(
-                    $pathFolder, 0777,
-                    true,
-                    true
-                );
-            }
-
-            $this->namespaceBaseController = config('component.namespaces.controller');
-
-            $file = new PhpFile();
-
-            $namespace = $file
-                ->addNamespace($this->namespaceBaseController)
-                ->addUse(Controller::class);
-
-            $class = $namespace
-                ->addClass(config('component.baseFile.controller'));
-
-            $class->setExtends(Controller::class);
-
-            File::put(config('component.paths.controller') . '\\' . config('component.baseFile.controller') . '.php', $file);
-        }
+        $this->primaryKey = $primaryKey;
     }
 
     /**
@@ -83,22 +34,27 @@ class ControllerService
      */
     public function create(): void
     {
-        $namespaceClass = config('component.namespaces.controller') . $this->getFolderPath();
-        $nameClass = $this->className() . 'Controller';
-        $namespaceBaseController = config('component.namespaces.base.controller') . DIRECTORY_SEPARATOR . config('component.baseFile.controller');
+        File::makeDirectory(
+            config('component.paths.controller'), 0777,
+            true,
+            true
+        );
 
         $fileController = new PhpFile();
 
+        $prefix = Str::contains(config('component.route_path'), 'api') ? 'API' : '';
+        $namespaceController = $this->getNamespaceController() . DIRECTORY_SEPARATOR . $prefix;
+
         $namespace = $fileController
-            ->addNamespace($namespaceClass)
-            ->addUse($namespaceBaseController);
+            ->addNamespace($namespaceController)
+            ->addUse(Controller::class);
 
         $class = $namespace
-            ->addClass($nameClass)
+            ->addClass($this->getNameController())
             ->setFinal()
-            ->setExtends($namespaceBaseController);
+            ->setExtends(Controller::class);
 
-        if ($this->options['service']) {
+        if ($this->option['service']) {
             $this->addService($namespace, $class);
         }
 
@@ -109,27 +65,26 @@ class ControllerService
 
             $this->generateInputParameters($methodClass, $namespace, $method);
 
-            if ($this->options['resource'] && $this->options['service']) {
+            if ($this->option['resource'] && $this->option['service']) {
                 $this->generateBody($method, $namespace, $methodClass);
             }
         }
 
         $file = File::put(
-            config('component.paths.controller') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $nameClass . '.php',
+            config('component.paths.controller') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->getNameController() . '.php',
             $fileController
         );
 
         if ($file) {
-            $this->createRoute($namespaceClass, $nameClass);
+            $this->createRoute($namespaceController);
         }
     }
 
     /**
-     * @param string $namespaceClass
-     * @param string $className
+     * @param string $namespace
      * @return void
      */
-    private function createRoute(string $namespaceClass, string $className): void
+    private function createRoute(string $namespace): void
     {
         $fileName = Str::afterLast(config('component.route_path'), '\\');
 
@@ -139,7 +94,6 @@ class ControllerService
             File::makeDirectory($folder);
 
             $fileRoute = new PhpFile();
-            $fileRoute->getClasses();
             $fileRoute->addUse(Route::class);
             $printer = new PsrPrinter();
             $data = $printer->printFile($fileRoute);
@@ -164,8 +118,8 @@ class ControllerService
         $fileRoute = file(config('component.route_path'));
 
         $searchLine = Route::class;
-        $class = $namespaceClass . DIRECTORY_SEPARATOR . $className;
-        $routeUrl = Str::snake(Str::plural($this->className()), '-');
+        $class = $namespace . DIRECTORY_SEPARATOR . $this->getNameController();
+        $routeUrl = Str::snake(Str::plural($this->getClassName()), '-');
 
         if (Str::contains($fileName, 'api')) {
             $lineRoute = "\n" . 'Route::apiResource(' . "'/" . $routeUrl . "', \\" . $class . "::class)->params(['" . $routeUrl . "' => 'id']);" . PHP_EOL;
@@ -194,24 +148,21 @@ class ControllerService
         Method       $methodClass
     ): void
     {
-        $nameResource = $this->className() . 'Resource';
-        $namespaceResource = config('component.namespaces.resource') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $nameResource;
-        $nameResourceCollection = $this->className() . 'Collection';
-        $namespaceResourceCollection = config('component.namespaces.resource') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $nameResourceCollection;
-        $nameDTO = Str::ucfirst($method === MethodsByClassEnum::STORE ? MethodsByClassEnum::CREATE : MethodsByClassEnum::UPDATE) . $this->className() . 'Input';
-        $namespaceDTO = config('component.namespaces.input') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $nameDTO;
-
-        $defaultId = 'id';
+        $nameResource = $this->getClassName() . config('component.prefix.resource.resource');
+        $namespaceResource = $this->getNamespaceResource() . DIRECTORY_SEPARATOR . $nameResource;
+        $nameResourceCollection = $this->getClassName() . config('component.prefix.resource.collection');
+        $namespaceResourceCollection = $this->getNamespaceResource() . DIRECTORY_SEPARATOR . $nameResourceCollection;
+        $nameDTO = Str::ucfirst($method === MethodsByClassEnum::STORE ? MethodsByClassEnum::CREATE : MethodsByClassEnum::UPDATE) . $this->getClassName() . config('component.prefix.dto.input');
+        $namespaceDTO = $this->getNamespaceDtoInput() . DIRECTORY_SEPARATOR . $nameDTO;
 
         $namespace
             ->addUse(JsonResponse::class);
-
 
         switch ($method) {
             case MethodsByClassEnum::INDEX:
                 $body = 'return new ' . $nameResourceCollection . '(';
 
-                if ($this->options['service']) {
+                if ($this->option['service']) {
                     $body .= '$this->service->' . MethodsByClassEnum::ALL . '());';
                 } else {
                     $body = '';
@@ -224,11 +175,12 @@ class ControllerService
                     ->addComment('@return ' . $nameResourceCollection)
                     ->setReturnType($namespaceResourceCollection)
                     ->addBody($body);
+
                 break;
             case MethodsByClassEnum::STORE:
                 $body = '';
 
-                if ($this->options['dto']) {
+                if ($this->option['dto']) {
                     $namespace
                         ->addUse($namespaceDTO);
                     $body = '$dto = new ' . $nameDTO . '($request->validated());' . PHP_EOL . "\n";
@@ -236,11 +188,10 @@ class ControllerService
 
                 $body .= 'return new ' . $nameResource . '(';
 
-                if ($this->options['service']) {
+                if ($this->option['service']) {
                     $body .= '$this->service->' . MethodsByClassEnum::CREATE . '(';
 
-                    if ($this->options['dto']) {
-
+                    if ($this->option['dto']) {
                         $body .= '$dto));';
                     } else {
                         $body .= '$request->validated()));';
@@ -256,12 +207,13 @@ class ControllerService
                     ->addComment('@return ' . $nameResource)
                     ->setReturnType($namespaceResource)
                     ->addBody($body);
+
                 break;
             case MethodsByClassEnum::SHOW:
                 $body = 'return new ' . $nameResource . '(';
 
-                if ($this->options['service']) {
-                    $body .= '$this->service->' . MethodsByClassEnum::SHOW . '($' . $defaultId . '));';
+                if ($this->option['service']) {
+                    $body .= '$this->service->' . MethodsByClassEnum::SHOW . '($' . $this->primaryKey['name'] . '));';
                 } else {
                     $body = '';
                 }
@@ -273,11 +225,12 @@ class ControllerService
                     ->addComment('@return ' . $nameResource)
                     ->setReturnType($namespaceResource)
                     ->addBody($body);
+
                 break;
             case MethodsByClassEnum::UPDATE:
                 $body = '';
 
-                if ($this->options['dto']) {
+                if ($this->option['dto']) {
                     $namespace
                         ->addUse($namespaceDTO);
                     $body .= '$dto = new ' . $nameDTO . '($request->validated());' . PHP_EOL . "\n";
@@ -285,13 +238,13 @@ class ControllerService
 
                 $body .= 'return response()->json(';
 
-                if ($this->options['service']) {
+                if ($this->option['service']) {
                     $body .= '$this->service->' . MethodsByClassEnum::UPDATE . '(';
 
-                    if ($this->options['dto']) {
-                        $body .= '$dto, $' . $defaultId . '));';
+                    if ($this->option['dto']) {
+                        $body .= '$dto, $' . $this->primaryKey['name'] . '));';
                     } else {
-                        $body .= '$request->validated(), $' . $defaultId . '));';
+                        $body .= '$request->validated(), $' . $this->primaryKey['name'] . '));';
                     }
                 } else {
                     $body = '';
@@ -306,8 +259,8 @@ class ControllerService
             case MethodsByClassEnum::DELETE:
                 $body = 'return response()->json(';
 
-                if ($this->options['service']) {
-                    $body .= '$this->service->' . MethodsByClassEnum::DELETE . '($' . $defaultId . '));';
+                if ($this->option['service']) {
+                    $body .= '$this->service->' . MethodsByClassEnum::DELETE . '($' . $this->primaryKey['name'] . '));';
                 } else {
                     $body = '';
                 }
@@ -316,6 +269,7 @@ class ControllerService
                     ->addComment('@return JsonResponse')
                     ->setReturnType(JsonResponse::class)
                     ->addBody($body);
+
                 break;
         }
     }
@@ -327,7 +281,7 @@ class ControllerService
      */
     private function addService(PhpNamespace $namespace, ClassType $class): void
     {
-        $namespaceService = config('component.namespaces.interface.service') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $this->className() . 'ServiceInterface';
+        $namespaceService = $this->getNamespaceServiceInterface() . DIRECTORY_SEPARATOR . $this->getClassName() . config('component.prefix.service') . config('component.prefix.interface');
 
         $namespace
             ->addUse($namespaceService);
@@ -352,18 +306,17 @@ class ControllerService
         string       $method
     ): void
     {
-        $defaultParameter = 'id';
-
         switch ($method) {
             case MethodsByClassEnum::STORE:
             case MethodsByClassEnum::UPDATE:
-                $prefixRequest = Str::ucfirst($method == MethodsByClassEnum::STORE ? MethodsByClassEnum::CREATE : MethodsByClassEnum::UPDATE);
-                $namespaceRequest = config('component.namespaces.request') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $prefixRequest . $this->className() . 'Request';
+                $request = Str::ucfirst($method == MethodsByClassEnum::STORE ? MethodsByClassEnum::CREATE_METHOD : MethodsByClassEnum::UPDATE_METHOD);
+
+                $namespaceRequest = $this->getNamespaceRequest() . DIRECTORY_SEPARATOR . $request . $this->getClassName() . config('component.prefix.request');
 
                 $parameter = $methodClass
                     ->addParameter('request');
 
-                if (!$this->options['request']) {
+                if (!$this->option['request']) {
                     $methodClass
                         ->addComment('@param Request $request');
 
@@ -373,9 +326,8 @@ class ControllerService
                     $parameter
                         ->setType(Request::class);
                 } else {
-
                     $methodClass
-                        ->addComment('@param ' . $prefixRequest . $this->className() . 'Request $request');
+                        ->addComment('@param ' . $request . $this->getClassName() . config('component.prefix.request') . ' $request');
 
                     $namespace
                         ->addUse($namespaceRequest);
@@ -383,36 +335,23 @@ class ControllerService
                     $parameter
                         ->setType($namespaceRequest);
                 }
+
                 if ($method === MethodsByClassEnum::UPDATE) {
                     $methodClass
-                        ->addComment('@param int $' . $defaultParameter)
-                        ->addParameter($defaultParameter)
-                        ->setType('int');
+                        ->addComment('@param ' . $this->primaryKey['type'] . ' $' . $this->primaryKey['name'])
+                        ->addParameter($this->primaryKey['name'])
+                        ->setType($this->primaryKey['type']);
                 }
+
                 break;
             case MethodsByClassEnum::SHOW:
             case MethodsByClassEnum::DELETE:
                 $methodClass
-                    ->addComment('@param int $' . $defaultParameter)
-                    ->addParameter($defaultParameter)
-                    ->setType('int');
+                    ->addComment('@param ' . $this->primaryKey['type'] . ' . $' . $this->primaryKey['name'])
+                    ->addParameter($this->primaryKey['name'])
+                    ->setType($this->primaryKey['type']);
+
                 break;
         }
-    }
-
-    /**
-     * @return string
-     */
-    private function getFolderPath(): string
-    {
-        return Str::beforeLast($this->argument, '\\');
-    }
-
-    /**
-     * @return string
-     */
-    private function className(): string
-    {
-        return class_basename($this->argument);
     }
 }

@@ -8,10 +8,10 @@ use Illuminate\Support\Str;
 use Toshkq93\Components\Enums\DTONameEnum;
 use Toshkq93\Components\Services\DTOService;
 
-class MakeDTOCommand extends Command
+class MakeDTOOutputCommand extends Command
 {
     /** @var string */
-    protected $signature = 'make:dto
+    protected $signature = 'make:output-dto
                             {name}
                             {--properties=}';
 
@@ -35,7 +35,7 @@ class MakeDTOCommand extends Command
      */
     public function handle()
     {
-        $this->service->setFolder(Str::contains($this->getNameInput(), 'Output') ? DTONameEnum::OUTPUT : DTONameEnum::INPUT);
+        $this->service->setFolder(DTONameEnum::OUTPUT);
         $this->service->setProperties($this->option('properties'));
         $this->service->setArgument($this->getNameInput());
 

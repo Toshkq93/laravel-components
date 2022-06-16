@@ -8,25 +8,12 @@ use Illuminate\Support\Str;
 use Nette\PhpGenerator\ClassType;
 use Nette\PhpGenerator\Method;
 use Nette\PhpGenerator\PhpFile;
-use Nette\PhpGenerator\PhpNamespace;
 use Toshkq93\Components\Enums\MethodsByClassEnum;
 
-class RequestService
+class RequestService extends BaseServiceCreateClass
 {
     /** @var array */
     private array $properties;
-
-    /** @var string */
-    private string $argument;
-
-    /** @var array|string[] */
-    private array $fileNames = [
-        'Index{{name}}',
-        'Create{{name}}',
-        'Show{{name}}',
-        'Update{{name}}',
-        'Delete{{name}}'
-    ];
 
     /**
      * @param array $properties
@@ -37,53 +24,41 @@ class RequestService
     }
 
     /**
-     * @param string $argument
-     */
-    public function setArgument(string $argument): void
-    {
-        $this->argument = $argument;
-    }
-
-    /**
      * @return void
      */
     public function create(): void
     {
-        $fullPathFolder = config('component.paths.request') . $this->getFolderPath();
+        $fullPathFolder = config('component.paths.request') . DIRECTORY_SEPARATOR . $this->getFolderPathByDto();
 
         if (!File::exists($fullPathFolder)) {
             File::makeDirectory(
-                $fullPathFolder, 0777,
+                $fullPathFolder,
+                0777,
                 true,
                 true
             );
         }
 
-        $this->generatePHP($this->replaceRealNames(), $fullPathFolder);
+        $this->generatePHP();
     }
 
     /**
-     * @param array $requests
-     * @param string $path
      * @return void
      */
-    public function generatePHP(array $requests, string $path): void
+    public function generatePHP(): void
     {
-
-        $namespaceClass = config('component.namespaces.request') . $this->getFolderPath();
-
-        foreach ($requests as $request) {
-            $filePath = $path . DIRECTORY_SEPARATOR . $request . 'Request.php';
-            $className = $request . 'Request';
+        foreach (MethodsByClassEnum::REQUEST_NAMES as $request) {
+            $requestName = $request . $this->getClassName() . config('component.prefix.request');
+            $filePath = config('component.paths.request') . DIRECTORY_SEPARATOR . $this->getFolderPathByDto() . DIRECTORY_SEPARATOR . $requestName . '.php';
 
             $file = new PhpFile();
 
             $namespace = $file
-                ->addNamespace($namespaceClass)
+                ->addNamespace($this->getNamespaceRequest())
                 ->addUse(FormRequest::class);
 
             $class = $namespace
-                ->addClass($className)
+                ->addClass($requestName)
                 ->setFinal()
                 ->setExtends(FormRequest::class);
 
@@ -93,9 +68,11 @@ class RequestService
         }
     }
 
-    private function createMethods(
-        ClassType $class,
-    )
+    /**
+     * @param ClassType $class
+     * @return void
+     */
+    private function createMethods(ClassType $class): void
     {
         $class
             ->addMethod('authorize')
@@ -120,9 +97,7 @@ class RequestService
      * @param Method $methodRules
      * @return void
      */
-    private function generateMethodWithProperties(
-        Method $methodRules
-    ): void
+    private function generateMethodWithProperties(Method $methodRules): void
     {
         $methodRules
             ->addBody('return [');
@@ -159,35 +134,5 @@ class RequestService
 
         $methodRules
             ->addBody('];');
-    }
-
-    /**
-     * @return array
-     */
-    private function replaceRealNames(): array
-    {
-        $namesFiles = [];
-
-        foreach (MethodsByClassEnum::REQUEST_NAMES as $request) {
-            $namesFiles[] = Str::ucfirst($request) . $this->className();
-        }
-
-        return $namesFiles;
-    }
-
-    /**
-     * @return string
-     */
-    private function getFolderPath(): string
-    {
-        return Str::beforeLast($this->argument, '\\');
-    }
-
-    /**
-     * @return string
-     */
-    private function className(): string
-    {
-        return class_basename($this->argument);
     }
 }

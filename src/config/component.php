@@ -19,7 +19,7 @@ return [
         'controller' => app_path('Http\Controllers\API'),
         'request' => app_path('Http\Requests'),
         'resource' => app_path('Http\Resources'),
-        'rootPaths' => [
+        'interface' => [
             'repository' => app_path('Repositories\Interfaces'),
             'service' => app_path('Services\Interfaces'),
             'dto' => [
@@ -45,52 +45,40 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Namespaces
+    | prefixes
     |--------------------------------------------------------------------------
     |
-    | This namespaces by component's
+    | Prefixes by class name
     |
     */
 
-    'namespaces' => [
-        'repository' => 'App\Repositories',
-        'output' => 'App\DTO\Output',
-        'input' => 'App\DTO\Input',
-        'service' => 'App\Services',
-        'controller' => 'App\Http\Controllers\API',
-        'request' => 'App\Http\Requests',
-        'resource' => 'App\Http\Resources',
-        'interface' => [
-            'repository' => 'App\Repositories\Interfaces',
-            'service' => 'App\Services\Interfaces',
-            'dto' => [
-                'input' => 'App\DTO\Input\Interfaces',
-                'output' => 'App\DTO\Output\Interfaces'
-            ]
+    'prefix' => [
+        'service' => 'Service',
+        'repository' => 'Repository',
+        'request' => 'Request',
+        'controller' => 'Controller',
+        'resource' => [
+            'resource' => 'Resource',
+            'collection' => 'Collection'
         ],
-        'base' => [
-            'dto' => 'App\DTO',
-            'controller' => 'App\Http\Controllers\API',
-            'repository' => 'App\Repositories',
-            'service' => 'App\Services'
+        'interface' => 'Interface',
+        'dto' => [
+            'base' => 'DTO',
+            'input' => 'InputDTO',
+            'output' => 'OutputDTO'
         ]
     ],
 
     /*
     |--------------------------------------------------------------------------
-    | Base files
+    | Base file
     |--------------------------------------------------------------------------
     |
-    | This base file names
+    | This base file name by DTO, Service, Repository, Controller
     |
     */
 
-    'baseFile' => [
-        'dto' => 'BaseDTO',
-        'controller' => 'BaseController',
-        'repository' => 'BaseRepository',
-        'service' => 'BaseService'
-    ],
+    'base_name' => 'Base',
 
     /*
     |--------------------------------------------------------------------------

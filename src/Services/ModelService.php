@@ -4,6 +4,7 @@ namespace Toshkq93\Components\Services;
 
 use Doctrine\DBAL\Exception as DBALException;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
 
 class ModelService
@@ -11,7 +12,7 @@ class ModelService
     /** @var string */
     private string $dateClass;
 
-    /** @var array */
+    /** @var array  */
     private array $properties = [];
 
     /**
@@ -27,7 +28,7 @@ class ModelService
             : '\Illuminate\Support\Carbon';
 
         if ($hasDoctrine) {
-            $this->getPropertiesFromTable($model);
+           $this->getPropertiesFromTable($model);
         }
 
         return $this->properties;
@@ -98,41 +99,44 @@ class ModelService
                 }
             }
 
-            if (!$column->getNotnull()) {
-                $this->nullableColumns[$name] = true;
-            }
-
             if (!in_array($name, config('component.ignore_properties'))) {
-                $this->setProperty(
-                    $name,
-                    $type,
-                    $column->getAutoincrement(),
-                    !$column->getNotnull()
-                );
+                if (empty($this->properties[$name])) {
+                    if ($type !== null) {
+                        $newType = $type;
+                        if (!$column->getNotnull()) {
+                            $newType .= '|null';
+                        }
+                    } else {
+                        $newType = 'mixed';
+                    }
+
+                    $this->properties[$name] = [
+                        'type' => $newType,
+                        'isPrimary' => $column->getAutoincrement()
+                    ];
+                }
             }
         }
     }
 
     /**
-     * @param string $name
-     * @param string|null $type
-     * @param bool $isPrimary
-     * @param bool $nullable
-     * @return void
+     * @return array
      */
-    private function setProperty(string $name, string $type = null, bool $isPrimary = false, bool $nullable = false): void
+    public function getPrimaryKey(): array
     {
-        if (!isset($this->properties[$name])) {
-            $this->properties[$name] = [];
-            $this->properties[$name]['type'] = 'mixed';
-            $this->properties[$name]['isPrimary'] = false;
-        }
-        if ($type !== null) {
-            $newType = $type;
-            if ($nullable) {
-                $newType .= '|null';
+        $primaryKey = [];
+
+        if (!empty($this->properties)){
+            foreach ($this->properties as $key => $property){
+                if ($property['isPrimary']){
+                    $primaryKey = [
+                        'name' => $key,
+                        'type' => $property['type']
+                    ];
+                }
             }
-            $this->properties[$name]['type'] = $newType;
         }
+
+        return $primaryKey;
     }
 }

@@ -8,46 +8,34 @@ use Illuminate\Http\Resources\Json\ResourceCollection;
 use Illuminate\Support\Str;
 use Nette\PhpGenerator\PhpFile;
 
-class ResourceService
+class ResourceService extends BaseServiceCreateClass
 {
-    /** @var string */
-    private string $argument;
-
-    /**
-     * @param string $argument
-     */
-    public function setArgument(string $argument): void
-    {
-        $this->argument = $argument;
-    }
-
     /**
      * @return void
      */
     public function create(): void
     {
         File::makeDirectory(
-            config('component.paths.resource') . $this->getFolderPath(), 0777,
+            config('component.paths.resource') . DIRECTORY_SEPARATOR . $this->getFolderPathByDto(), 0777,
             true,
             true
         );
 
-        $namespaceClass = config('component.namespaces.resource') . $this->getFolderPath();
-
-        $this->createResource($namespaceClass);
-        $this->createCollection($namespaceClass);
+        $this->createResource();
+        $this->createCollection();
     }
 
     /**
-     * @param string $namespaceClass
      * @return void
      */
-    private function createCollection(string $namespaceClass): void
+    private function createCollection(): void
     {
+        $nameClass = $this->getClassName() . config('component.prefix.resource.collection');
+
         $file = new PhpFile();
-        $nameClass = $this->className() . 'Collection';
+
         $namespace = $file
-            ->addNamespace($namespaceClass)
+            ->addNamespace($this->getNamespaceResource())
             ->addUse(ResourceCollection::class);
 
         $class = $namespace
@@ -69,23 +57,22 @@ class ResourceService
             ->addBody('return parent::toArray($request);');
 
         File::put(
-            config('component.paths.resource') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $nameClass . '.php',
+            config('component.paths.resource') . DIRECTORY_SEPARATOR . $this->getFolderPathByDto() . DIRECTORY_SEPARATOR . $nameClass . '.php',
             $file
         );
     }
 
     /**
-     * @param string $namespaceClass
      * @return void
      */
-    private function createResource(string $namespaceClass): void
+    private function createResource(): void
     {
-        $nameClass = $this->className() . 'Resource';
+        $nameClass = $this->getClassName() . config('component.prefix.resource.resource');
 
         $file = new PhpFile();
 
         $namespace = $file
-            ->addNamespace($namespaceClass)
+            ->addNamespace($this->getNamespaceResource())
             ->addUse(JsonResource::class);
 
         $class = $namespace
@@ -107,24 +94,8 @@ class ResourceService
             ->addBody('return parent::toArray($request);');
 
         File::put(
-            config('component.paths.resource') . $this->getFolderPath() . DIRECTORY_SEPARATOR . $nameClass . '.php',
+            config('component.paths.resource') . DIRECTORY_SEPARATOR . $this->getFolderPathByDto() . DIRECTORY_SEPARATOR . $nameClass . '.php',
             $file
         );
-    }
-
-    /**
-     * @return string
-     */
-    private function getFolderPath(): string
-    {
-        return Str::beforeLast($this->argument, '\\');
-    }
-
-    /**
-     * @return string
-     */
-    private function className(): string
-    {
-        return class_basename($this->argument);
     }
 }

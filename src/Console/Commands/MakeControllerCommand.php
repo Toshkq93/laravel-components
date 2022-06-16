@@ -17,7 +17,8 @@ class MakeControllerCommand extends Command
                             {?--service}
                             {?--resource}
                             {?--request}
-                            {?--dto}';
+                            {?--dto}
+                            {?--primary}';
 
     /** @var bool */
     protected $hidden = true;
@@ -44,9 +45,8 @@ class MakeControllerCommand extends Command
     public function handle()
     {
         $this->service->setArgument($this->getNameInput());
-        $this->service->setOptions($this->options());
-
-        $this->service->createBaseController();
+        $this->service->setOption($this->options());
+        $this->service->setPrimaryKey($this->option('primary'));
 
         $this->service->create();
 

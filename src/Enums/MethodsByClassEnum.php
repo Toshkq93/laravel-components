@@ -12,6 +12,9 @@ class MethodsByClassEnum
     const STORE = 'store';
     const ALL = 'all';
 
+    const CREATE_METHOD = 'Create';
+    const UPDATE_METHOD = 'Update';
+
     const CONTROLLER_METHODS = [
         self::INDEX,
         self::STORE,
@@ -37,12 +40,12 @@ class MethodsByClassEnum
     ];
 
     const REQUEST_NAMES = [
-        self::CREATE,
-        self::UPDATE,
+        self::CREATE_METHOD,
+        self::UPDATE_METHOD,
     ];
 
     const DTO_INPUT_NAMES = [
-        self::CREATE,
-        self::UPDATE,
+        self::CREATE_METHOD,
+        self::UPDATE_METHOD,
     ];
 }

@@ -81,7 +81,8 @@ class ComponentsCommand extends GeneratorCommand
 
         if ($this->option('dto')) {
             $properties = $this->service->getProperties($model);
-            if (!$properties) {
+
+            if (empty($properties)) {
                 $table = ($model)->getTable();
                 $this->error("Table {$table} not found. Please create migration and use php artisan migrate");
                 return self::FAILURE;
@@ -108,7 +109,9 @@ class ComponentsCommand extends GeneratorCommand
         }
 
         if ($this->option('controller')) {
-            $this->createController();
+            $primaryKey = $properties ? $this->service->getPrimaryKey() : [];
+
+            $this->createController($primaryKey);
         }
 
         return self::SUCCESS;
@@ -125,21 +128,21 @@ class ComponentsCommand extends GeneratorCommand
      */
     private function createDTO($properties): void
     {
-        Artisan::call('make:dto', [
-            'name' => "{$this->classPath()}Output",
+        Artisan::call('make:output-dto', [
+            'name' => $this->classPath(),
             '--properties' => $properties
         ]);
-        $pathToDTO = 'app\\DTO\\Output' . $this->classPath();
+        $pathToDTO = 'app\DTO\Output' . $this->classPath();
 
         $this->info("<fg=white;bg=green>Output DTO by the way {$pathToDTO} create success!</>");
 
-        Artisan::call('make:dto', [
-            'name' => "{$this->classPath()}Input",
+        Artisan::call('make:input-dto', [
+            'name' => $this->classPath(),
             '--properties' => $properties
         ]);
-        $pathToFilter = 'app\\DTO\\Input' . $this->classPath();
+        $pathToFilters = 'app\DTO\Input' . $this->classPath();
 
-        $this->info("<fg=white;bg=green>Input DTO by the way {$pathToFilter} create success!</>");
+        $this->info("<fg=white;bg=green>Input DTO by the way {$pathToFilters} create success!</>");
     }
 
     /**
@@ -149,12 +152,12 @@ class ComponentsCommand extends GeneratorCommand
     {
         $result = false;
 
-        if (File::exists(config('component.paths.rootPaths.repository') . $this->path . DIRECTORY_SEPARATOR . "{$this->className()}RepositoryInterface.php")) {
+        if (File::exists(config('component.paths.interface.repository') . DIRECTORY_SEPARATOR . $this->className() . config('component.prefix.repository') . config('component.prefix.interface') . ".php")) {
             $result = $this->confirm('File ' . $this->className() . 'RepositoryInterface exist, do you want rewrite this file?', true);
         }
 
         Artisan::call('make:repository', [
-            'name' => "{$this->classPath()}",
+            'name' => $this->classPath(),
             '--dto' => $this->option('dto') ?? false,
             '--choice' => $result
         ]);
@@ -169,13 +172,13 @@ class ComponentsCommand extends GeneratorCommand
     {
         $result = false;
 
-        if (File::exists(config('component.paths.rootPaths.service') . $this->path . DIRECTORY_SEPARATOR . "{$this->className()}ServiceInterface.php")) {
+        if (File::exists(config('component.paths.interface.service') . DIRECTORY_SEPARATOR . $this->className() . config('component.prefix.service') . config('component.prefix.interface') . ".php")) {
             $result = $this->confirm('File ' . $this->className() . 'ServiceInterface exist, do you want rewrite this file?', true);
         }
 
 
         Artisan::call('make:service', [
-            'name' => "{$this->classPath()}",
+            'name' => $this->classPath(),
             '--repository' => $this->option('repository') ?? false,
             '--dto' => $this->option('dto') ?? false,
             '--choice' => $result
@@ -190,9 +193,9 @@ class ComponentsCommand extends GeneratorCommand
     private function createResource(): void
     {
         Artisan::call('create:resource', [
-            'name' => "{$this->classPath()}",
+            'name' => $this->classPath(),
         ]);
-        $path = 'app\\Http\\Resources' . $this->classPath();
+        $path = 'app\Http\Resources' . $this->classPath();
 
         $this->info("<fg=white;bg=green>Resources by the way {$path} create success!</>");
     }
@@ -204,10 +207,10 @@ class ComponentsCommand extends GeneratorCommand
     private function createRequest($properties): void
     {
         Artisan::call('create:request', [
-            'name' => "{$this->classPath()}",
+            'name' => $this->classPath(),
             '--properties' => $properties
         ]);
-        $path = 'app\\Http\\Requests' . $this->classPath();
+        $path = 'app\Http\Requests' . $this->classPath();
 
         $this->info("<fg=white;bg=green>Requests by the way {$path} create success!</>");
     }
@@ -215,14 +218,15 @@ class ComponentsCommand extends GeneratorCommand
     /**
      * @return void
      */
-    private function createController(): void
+    private function createController(array $primaryKey): void
     {
         Artisan::call("create:controller", [
-            'name' => "{$this->classPath()}",
+            'name' => $this->classPath(),
             '--service' => $this->option('service') ?? null,
             '--request' => $this->option('request') ?? null,
             '--resource' => $this->option('resource') ?? null,
             '--dto' => $this->option('dto') ?? null,
+            '--primary' => $primaryKey,
         ]);
 
         $this->info("<fg=white;bg=green>Controller {$this->className()}Controller create success!</>");

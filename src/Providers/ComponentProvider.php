@@ -5,7 +5,8 @@ namespace Toshkq93\Components\Providers;
 use Illuminate\Support\ServiceProvider;
 use Toshkq93\Components\Console\Commands\ComponentsCommand;
 use Toshkq93\Components\Console\Commands\MakeControllerCommand;
-use Toshkq93\Components\Console\Commands\MakeDTOCommand;
+use Toshkq93\Components\Console\Commands\MakeDTOOutputCommand;
+use Toshkq93\Components\Console\Commands\MakeDTOInputCommand;
 use Toshkq93\Components\Console\Commands\MakeRepositoryCommand;
 use Toshkq93\Components\Console\Commands\MakeRequestCommand;
 use Toshkq93\Components\Console\Commands\MakeResourceCommand;
@@ -50,10 +51,11 @@ class ComponentProvider extends ServiceProvider
                 ComponentsCommand::class,
                 MakeControllerCommand::class,
                 MakeServiceCommand::class,
-                MakeDTOCommand::class,
+                MakeDTOOutputCommand::class,
                 MakeRepositoryCommand::class,
                 MakeResourceCommand::class,
                 MakeRequestCommand::class,
+                MakeDTOInputCommand::class
             ]);
         }
     }

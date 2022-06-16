@@ -2,36 +2,25 @@
 
 namespace Toshkq93\Components\Console\Commands;
 
-use File;
 use Illuminate\Console\Command;
-use Illuminate\Support\Str;
-use Toshkq93\Components\Services\Service;
+use Toshkq93\Components\Enums\DTONameEnum;
+use Toshkq93\Components\Services\InputDTOService;
 
-class MakeServiceCommand extends Command
+class MakeDTOInputCommand extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
-    protected $signature = 'make:service
+    /** @var string */
+    protected $signature = 'make:input-dto
                             {name}
-                            {?--dto}
-                            {?--repository}
-                            {--choice}';
+                            {--properties=}';
+
+    /** @var string */
+    protected $description = 'Create input DTO';
 
     /** @var bool */
     protected $hidden = true;
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Create Service';
-
     public function __construct(
-        private Service $service
+        private InputDTOService $service
     )
     {
         parent::__construct();
@@ -44,10 +33,11 @@ class MakeServiceCommand extends Command
      */
     public function handle()
     {
+        $this->service->setFolder(DTONameEnum::INPUT);
+        $this->service->setProperties($this->option('properties'));
         $this->service->setArgument($this->getNameInput());
-        $this->service->setOption($this->options());
 
-        $this->service->createBase();
+        $this->service->createInterfaces();
 
         $this->service->create();
 
