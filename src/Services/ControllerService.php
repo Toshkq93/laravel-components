@@ -213,7 +213,7 @@ class ControllerService extends BaseServiceCreateClass
                 $body = 'return new ' . $nameResource . '(';
 
                 if ($this->option['service']) {
-                    $body .= '$this->service->' . MethodsByClassEnum::SHOW . '($' . $this->primaryKey['name'] . '));';
+                    $body .= '$this->service->' . MethodsByClassEnum::SHOW . '($id));';
                 } else {
                     $body = '';
                 }
@@ -242,9 +242,9 @@ class ControllerService extends BaseServiceCreateClass
                     $body .= '$this->service->' . MethodsByClassEnum::UPDATE . '(';
 
                     if ($this->option['dto']) {
-                        $body .= '$dto, $' . $this->primaryKey['name'] . '));';
+                        $body .= '$dto, $id));';
                     } else {
-                        $body .= '$request->validated(), $' . $this->primaryKey['name'] . '));';
+                        $body .= '$request->validated(), $id));';
                     }
                 } else {
                     $body = '';
@@ -260,7 +260,7 @@ class ControllerService extends BaseServiceCreateClass
                 $body = 'return response()->json(';
 
                 if ($this->option['service']) {
-                    $body .= '$this->service->' . MethodsByClassEnum::DELETE . '($' . $this->primaryKey['name'] . '));';
+                    $body .= '$this->service->' . MethodsByClassEnum::DELETE . '($id));';
                 } else {
                     $body = '';
                 }
@@ -338,8 +338,8 @@ class ControllerService extends BaseServiceCreateClass
 
                 if ($method === MethodsByClassEnum::UPDATE) {
                     $methodClass
-                        ->addComment('@param ' . $this->primaryKey['type'] . ' $' . $this->primaryKey['name'])
-                        ->addParameter($this->primaryKey['name'])
+                        ->addComment('@param ' . $this->primaryKey['type'] . ' $id')
+                        ->addParameter('id')
                         ->setType($this->primaryKey['type']);
                 }
 
@@ -347,8 +347,8 @@ class ControllerService extends BaseServiceCreateClass
             case MethodsByClassEnum::SHOW:
             case MethodsByClassEnum::DELETE:
                 $methodClass
-                    ->addComment('@param ' . $this->primaryKey['type'] . ' . $' . $this->primaryKey['name'])
-                    ->addParameter($this->primaryKey['name'])
+                    ->addComment('@param ' . $this->primaryKey['type'] . ' . $id')
+                    ->addParameter('id')
                     ->setType($this->primaryKey['type']);
 
                 break;
