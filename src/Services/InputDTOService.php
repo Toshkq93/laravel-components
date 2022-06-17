@@ -41,9 +41,12 @@ class InputDTOService extends BaseServiceCreateClass
      */
     public function createInterfaces(): void
     {
-        if (!File::exists(app_path('DTO') . DIRECTORY_SEPARATOR . Str::ucfirst($this->folder) . DIRECTORY_SEPARATOR . 'Interfaces')) {
+        $path = Str::before(Str::after(config('component.paths.input'), 'app\\'), '\\');
+        $dirNameByInterface = Str::afterLast(config('component.paths.interface.dto.input'), '\\');
+
+        if (!File::exists(app_path($path) . DIRECTORY_SEPARATOR . Str::ucfirst($this->folder) . DIRECTORY_SEPARATOR . $dirNameByInterface)) {
             File::makeDirectory(
-                app_path('DTO') . DIRECTORY_SEPARATOR . Str::ucfirst($this->folder) . DIRECTORY_SEPARATOR . 'Interfaces',
+                app_path($path) . DIRECTORY_SEPARATOR . Str::ucfirst($this->folder) . DIRECTORY_SEPARATOR . $dirNameByInterface,
                 0777,
                 true,
                 true
@@ -87,18 +90,19 @@ class InputDTOService extends BaseServiceCreateClass
         foreach (MethodsByClassEnum::DTO_INPUT_NAMES as $dto) {
             $nameDTO = $dto . $this->getClassName() . config('component.prefix.dto.input');
             $namespaceInterface = $this->getNamespaceDtoInputInterface() . DIRECTORY_SEPARATOR . $dto . config('component.prefix.dto.input') . config('component.prefix.interface');
+            $namespaceBaseDto = $this->getNamespaceBaseDto() . DIRECTORY_SEPARATOR . $this->getNameBaseDto();
 
             $file = new PhpFile();
 
             $namespace = $file
                 ->addNamespace($this->getNamespaceDtoInput())
                 ->addUse($namespaceInterface)
-                ->addUse($this->getNamespaceBaseDto());
+                ->addUse($namespaceBaseDto);
 
             $class = $namespace
                 ->addClass($nameDTO)
                 ->addImplement($namespaceInterface)
-                ->setExtends($this->getNamespaceBaseDto())
+                ->setExtends($namespaceBaseDto)
                 ->setFinal();
 
             foreach ($this->properties as $property => $values) {

@@ -9,7 +9,7 @@ composer require --dev toshkq93/laravel-components
 
 Publish the config file with:
 ```
-php artisan vendor:publish --provider="Toshkq93\Components\Providers\ComponentProvider"
+php artisan vendor:publish --provider=Toshkq93\Components\Providers\ComponentProvider
 ```
 
 Go to the root folder of your project and enter the command:
@@ -22,11 +22,12 @@ php artisam make:components App\Models\User --all
 ```
 
 and your project will create:
-- DTOs (input (App\DTO\Input) and output (App\DTO\Input) classes),
-- controller (App\Http\Controllers\API), requests (App\Http\Requests),
+- DTOs (input (App\DTO\Input) and output (App\DTO\Output) classes) + interfaces,
+- controller (App\Http\Controllers\API)
+- requests (App\Http\Requests),
 - resources (App\Http\Resources),
-- repository and service (interface (App\Contracts\Repositories) + class (App\Repositories)),
-- service (interface ( App\Contracts\Services) + class (App\Services))
+- repository and service (interface (App\Contracts\Repositories) + class (App\Repositories) + base class),
+- service (interface ( App\Contracts\Services) + class (App\Services) + base class)
 
 you can also use other flags in various combination:
 - --dto - create DTO classes input and output,
@@ -35,6 +36,8 @@ you can also use other flags in various combination:
 - --service - create service class,
 - --request - create request classes,
 - --repository - create repository class.
+- --all - all of the above
+
 
 After generating services and repositories, bind is automatically added to the container in the App\Provides\AppServiceProvider.
 

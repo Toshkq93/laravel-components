@@ -6,7 +6,6 @@ use App\DTO\Input\Interfaces\CreateInputInterface;
 use App\DTO\Input\Interfaces\UpdateInputInterface;
 use App\DTO\Output\Interfaces\OutputInterface;
 use File;
-use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Nette\PhpGenerator\Literal;
@@ -14,9 +13,7 @@ use Nette\PhpGenerator\PhpFile;
 use Spatie\DataTransferObject\Attributes\CastWith;
 use Spatie\DataTransferObject\Caster;
 use Spatie\DataTransferObject\DataTransferObject;
-use Toshkq93\Components\Enums\DTONameEnum;
 use App\DTO\Casters\Date\CarbonCaster;
-use Toshkq93\Components\Enums\MethodsByClassEnum;
 
 class DTOService extends BaseServiceCreateClass
 {
@@ -25,17 +22,6 @@ class DTOService extends BaseServiceCreateClass
 
     /** @var array */
     private array $properties;
-
-    /** @var array|string[] */
-    private array $macrossFilters = [
-        'Create{{name}}',
-        'Update{{name}}',
-    ];
-
-    /** @var array|string[] */
-    private array $macrossDTO = [
-        '{{name}}',
-    ];
 
     /**
      * @param string $folder
@@ -58,35 +44,35 @@ class DTOService extends BaseServiceCreateClass
      */
     public function createBaseDTO(): void
     {
-        if (!File::exists(
-            app_path('DTO') . DIRECTORY_SEPARATOR . $this->getNameBaseDto() . '.php'
-        )) {
+        $path = Str::before(Str::after(config('component.paths.input'), 'app\\'), '\\');
+        $dirNameByInterface = Str::afterLast(config('component.paths.interface.dto.output'), '\\');
 
-            if (!File::exists(app_path('DTO'))) {
-                File::makeDirectory(
-                    app_path('DTO'),
-                    0777,
-                    true,
-                    true
-                );
-            }
+        if (!File::exists(
+            app_path($path) . DIRECTORY_SEPARATOR . $this->getNameBaseDto() . '.php'
+        )) {
+            File::makeDirectory(
+                app_path($path),
+                0777,
+                true,
+                true
+            );
 
             $file = new PhpFile();
 
             $namespace = $file
-                ->addNamespace('App\DTO')
+                ->addNamespace($this->getNamespaceBaseDto())
                 ->addUse(DataTransferObject::class);
 
             $namespace
                 ->addClass($this->getNameBaseDto())
                 ->setExtends(DataTransferObject::class);
 
-            File::put(app_path('DTO') . DIRECTORY_SEPARATOR . $this->getNameBaseDto() . '.php', $file);
+            File::put(app_path($path) . DIRECTORY_SEPARATOR . $this->getNameBaseDto() . '.php', $file);
         }
 
-        if (!File::exists(app_path('DTO') . DIRECTORY_SEPARATOR . Str::ucfirst($this->folder) . DIRECTORY_SEPARATOR . 'Interfaces')) {
+        if (!File::exists(app_path($path) . DIRECTORY_SEPARATOR . Str::ucfirst($this->folder) . DIRECTORY_SEPARATOR . $dirNameByInterface)) {
             File::makeDirectory(
-                app_path('DTO') . DIRECTORY_SEPARATOR . Str::ucfirst($this->folder) . DIRECTORY_SEPARATOR . 'Interfaces',
+                app_path($path) . DIRECTORY_SEPARATOR . Str::ucfirst($this->folder) . DIRECTORY_SEPARATOR . $dirNameByInterface,
                 0777,
                 true,
                 true
@@ -131,15 +117,16 @@ class DTOService extends BaseServiceCreateClass
 
         $nameDTO = $this->getClassName() . config('component.prefix.dto.output');
         $namespaceInterface = $this->getNamespaceDtoOutputInterface() . DIRECTORY_SEPARATOR . config('component.prefix.dto.output') . config('component.prefix.interface');
+        $namespaceBaseDto = $this->getNamespaceBaseDto() . DIRECTORY_SEPARATOR . $this->getNameBaseDto();
 
         $namespace = $file
             ->addNamespace($this->getNamespaceDtoOutput())
             ->addUse($namespaceInterface)
-            ->addUse($this->getNamespaceBaseDto());
+            ->addUse($namespaceBaseDto);
 
         $class = $namespace
             ->addClass($nameDTO)
-            ->setExtends($this->getNamespaceBaseDto())
+            ->setExtends($namespaceBaseDto)
             ->addImplement($namespaceInterface)
             ->setFinal();
 
@@ -168,10 +155,11 @@ class DTOService extends BaseServiceCreateClass
      */
     private function createCasterDate(): void
     {
-        $path = app_path('DTO') . '\Casters\Date';
-        $namespace = 'App\DTO\Casters\Date';
+        $pathToDto = Str::before(Str::after(config('component.paths.input'), 'app\\'), '\\');
+        $path = app_path($pathToDto) . '\Casters\Date';
+        $namespace = 'App\\' . $pathToDto . '\Casters\Date';
 
-        if (!File::exists(app_path('DTO') . '\Casters')) {
+        if (!File::exists(app_path($pathToDto) . '\Casters')) {
             File::makeDirectory(
                 $path,
                 0777,

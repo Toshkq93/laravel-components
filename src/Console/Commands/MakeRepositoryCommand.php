@@ -2,10 +2,7 @@
 
 namespace Toshkq93\Components\Console\Commands;
 
-use Exception;
-use File;
 use Illuminate\Console\Command;
-use Illuminate\Support\Str;
 use Toshkq93\Components\Services\RepositoryService;
 
 class MakeRepositoryCommand extends Command
@@ -52,24 +49,7 @@ class MakeRepositoryCommand extends Command
 
         $this->service->create();
 
-
         return self::SUCCESS;
-    }
-
-    /**
-     * @return string
-     */
-    private function className(): string
-    {
-        return class_basename($this->getNameInput());
-    }
-
-    /**
-     * @return string
-     */
-    private function getFolderPath(): string
-    {
-        return Str::beforeLast($this->getNameInput(), '\\');
     }
 
     /**

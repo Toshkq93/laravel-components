@@ -42,11 +42,8 @@ class ControllerService extends BaseServiceCreateClass
 
         $fileController = new PhpFile();
 
-        $prefix = Str::contains(config('component.route_path'), 'api') ? 'API' : '';
-        $namespaceController = $this->getNamespaceController() . DIRECTORY_SEPARATOR . $prefix;
-
         $namespace = $fileController
-            ->addNamespace($namespaceController)
+            ->addNamespace($this->getNamespaceController())
             ->addUse(Controller::class);
 
         $class = $namespace
@@ -76,15 +73,14 @@ class ControllerService extends BaseServiceCreateClass
         );
 
         if ($file) {
-            $this->createRoute($namespaceController);
+            $this->createRoute();
         }
     }
 
     /**
-     * @param string $namespace
      * @return void
      */
-    private function createRoute(string $namespace): void
+    private function createRoute(): void
     {
         $fileName = Str::afterLast(config('component.route_path'), '\\');
 
@@ -118,11 +114,12 @@ class ControllerService extends BaseServiceCreateClass
         $fileRoute = file(config('component.route_path'));
 
         $searchLine = Route::class;
-        $class = $namespace . DIRECTORY_SEPARATOR . $this->getNameController();
+        $class = $this->getNamespaceController() . DIRECTORY_SEPARATOR . $this->getNameController();
         $routeUrl = Str::snake(Str::plural($this->getClassName()), '-');
+        $parameter = Str::lower(Str::plural($this->getClassName()));
 
         if (Str::contains($fileName, 'api')) {
-            $lineRoute = "\n" . 'Route::apiResource(' . "'/" . $routeUrl . "', \\" . $class . "::class)->params(['" . $routeUrl . "' => 'id']);" . PHP_EOL;
+            $lineRoute = "\n" . 'Route::apiResource(' . "'/" . $routeUrl . "', \\" . $class . "::class)->parameters(['" . $parameter . "' => 'id']);" . PHP_EOL;
         } else {
             $lineRoute = "\n" . 'Route::resource(' . "'/" . $routeUrl . "', \\" . $class . "::class);" . PHP_EOL;
         }
@@ -347,7 +344,7 @@ class ControllerService extends BaseServiceCreateClass
             case MethodsByClassEnum::SHOW:
             case MethodsByClassEnum::DELETE:
                 $methodClass
-                    ->addComment('@param ' . $this->primaryKey['type'] . ' . $id')
+                    ->addComment('@param ' . $this->primaryKey['type'] . ' $id')
                     ->addParameter('id')
                     ->setType($this->primaryKey['type']);
 
