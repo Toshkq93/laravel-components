@@ -30,7 +30,7 @@ class ModelService
         if ($hasDoctrine) {
            $this->getPropertiesFromTable($model);
         }
-        dd($this->properties);
+
         return $this->properties;
     }
 
