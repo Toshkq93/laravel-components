@@ -30,7 +30,7 @@ class ModelService
         if ($hasDoctrine) {
            $this->getPropertiesFromTable($model);
         }
-
+        dd($this->properties);
         return $this->properties;
     }
 
@@ -103,7 +103,7 @@ class ModelService
                 if (empty($this->properties[$name])) {
                     if ($type !== null) {
                         $newType = $type;
-                        if (!$column->getNotnull()) {
+                        if (!$column->getNotnull() or in_array($name, $model->getHidden())) {
                             $newType .= '|null';
                         }
                     } else {
