@@ -26,6 +26,10 @@ class ControllerService extends BaseServiceCreateClass
      */
     public function setPrimaryKey(array $primaryKey): void
     {
+        if (empty($primaryKey)){
+            $primaryKey = ['name' => 'id', 'type' => 'int'];
+        }
+
         $this->primaryKey = $primaryKey;
     }
 

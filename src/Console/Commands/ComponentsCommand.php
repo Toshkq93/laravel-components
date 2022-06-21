@@ -109,7 +109,7 @@ class ComponentsCommand extends GeneratorCommand
         }
 
         if ($this->option('controller')) {
-            $primaryKey = $properties ? $this->service->getPrimaryKey() : [];
+            $primaryKey = isset($properties) ? $this->service->getPrimaryKey() : [];
 
             $this->createController($primaryKey);
         }
@@ -228,7 +228,7 @@ class ComponentsCommand extends GeneratorCommand
             '--primary' => $primaryKey,
         ]);
 
-        $this->info("<fg=white;bg=green>Controller " . config('component.prefix.controller') . " " . $this->className() . config('component.prefix.controller') . " create success!</>");
+        $this->info("<fg=white;bg=green>" . config('component.prefix.controller') . " " . $this->className() . config('component.prefix.controller') . " create success!</>");
     }
 
     /**
