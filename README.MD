@@ -14,7 +14,7 @@ php artisan vendor:publish --provider=Toshkq93\Components\Providers\ComponentPro
 
 Go to the root folder of your project and enter the command:
 ```
-php artisam make:components {namespace_model} --all
+php artisan make:components {namespace_model} --all
 ```
 Example:
 ```php
