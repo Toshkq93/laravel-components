@@ -2,23 +2,14 @@
 
 namespace Toshkq93\Components\Services;
 
-use Doctrine\DBAL\Exception as DBALException;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
 
-class ModelService
+final class ModelService
 {
-    /** @var string */
     private string $dateClass;
-
-    /** @var array  */
     private array $properties = [];
 
-    /**
-     * @param Model $model
-     * @return array
-     */
     public function getProperties(Model $model): array
     {
         $hasDoctrine = interface_exists('Doctrine\DBAL\Driver');
@@ -34,11 +25,6 @@ class ModelService
         return $this->properties;
     }
 
-    /**
-     * @param Model $model
-     * @return void
-     * @throws DBALException
-     */
     public function getPropertiesFromTable(Model $model): void
     {
         $table = $model->getConnection()->getTablePrefix() . $model->getTable();
@@ -119,9 +105,6 @@ class ModelService
         }
     }
 
-    /**
-     * @return array
-     */
     public function getPrimaryKey(): array
     {
         $primaryKey = [];

@@ -2,7 +2,7 @@
 
 namespace Toshkq93\Components\Enums;
 
-class DTONameEnum
+final class DTONameEnum
 {
     const OUTPUT = 'output';
     const INPUT = 'input';

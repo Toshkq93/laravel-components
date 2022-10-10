@@ -6,18 +6,13 @@ use Illuminate\Console\Command;
 use Toshkq93\Components\Enums\DTONameEnum;
 use Toshkq93\Components\Services\InputDTOService;
 
-class MakeDTOInputCommand extends Command
+final class MakeDTOInputCommand extends Command
 {
-    /** @var string */
+    protected $hidden = true;
+    protected $description = 'Create input DTO';
     protected $signature = 'make:input-dto
                             {name}
                             {--properties=}';
-
-    /** @var string */
-    protected $description = 'Create input DTO';
-
-    /** @var bool */
-    protected $hidden = true;
 
     public function __construct(
         private InputDTOService $service
@@ -26,11 +21,6 @@ class MakeDTOInputCommand extends Command
         parent::__construct();
     }
 
-    /**
-     * Execute the console command.
-     *
-     * @return int
-     */
     public function handle()
     {
         $this->service->setFolder(DTONameEnum::INPUT);
@@ -44,11 +34,6 @@ class MakeDTOInputCommand extends Command
         return self::SUCCESS;
     }
 
-    /**
-     * Get the desired class name from the input.
-     *
-     * @return string
-     */
     private function getNameInput(): string
     {
         return trim($this->argument('name'));

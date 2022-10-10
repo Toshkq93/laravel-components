@@ -2,33 +2,19 @@
 
 namespace Toshkq93\Components\Console\Commands;
 
-use File;
 use Illuminate\Console\Command;
 use Toshkq93\Components\Services\ControllerService;
 
-class MakeControllerCommand extends Command
+final class MakeControllerCommand extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
+    protected $hidden = true;
+    protected $description = 'Create Controller';
     protected $signature = 'create:controller {name}
                             {?--service}
                             {?--resource}
                             {?--request}
                             {?--dto}
                             {?--primary}';
-
-    /** @var bool */
-    protected $hidden = true;
-
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Create Controller';
 
     public function __construct(
         private ControllerService $service
@@ -37,11 +23,6 @@ class MakeControllerCommand extends Command
         parent::__construct();
     }
 
-    /**
-     * Execute the console command.
-     *
-     * @return int
-     */
     public function handle()
     {
         $this->service->setArgument($this->getNameInput());
@@ -50,14 +31,9 @@ class MakeControllerCommand extends Command
 
         $this->service->create();
 
-        return 0;
+        return self::SUCCESS;
     }
 
-    /**
-     * Get the desired class name from the input.
-     *
-     * @return string
-     */
     private function getNameInput(): string
     {
         return trim($this->argument('name'));

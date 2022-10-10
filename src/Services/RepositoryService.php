@@ -16,22 +16,22 @@ use Nette\PhpGenerator\PhpNamespace;
 use ReflectionClass;
 use Toshkq93\Components\Enums\MethodsByClassEnum;
 
-class RepositoryService extends BaseServiceCreateClass
+final class RepositoryService extends BaseServiceCreateClass
 {
-    /** @var Application */
     private Application $laravel;
+    private string $pathOutputDTO;
 
-    /**
-     * @param Application $laravel
-     */
+    public function __construct()
+    {
+        parent::__construct();
+        $this->pathOutputDTO = $this->replacePathBySystem(config('component.paths.output'));
+    }
+
     public function setLaravel(Application $laravel): void
     {
         $this->laravel = $laravel;
     }
 
-    /**
-     * @return void
-     */
     public function createBase(): void
     {
         $fileInterface = File::exists(config('component.paths.interface.repository') . DIRECTORY_SEPARATOR . $this->getNameRepositoryInterface() . ".php");
@@ -54,9 +54,6 @@ class RepositoryService extends BaseServiceCreateClass
         }
     }
 
-    /**
-     * @return void
-     */
     public function create(): void
     {
         File::makeDirectory(
@@ -72,17 +69,13 @@ class RepositoryService extends BaseServiceCreateClass
         $this->generatePHPCodeByFile($classModels);
     }
 
-    /**
-     * @param ReflectionClass $model
-     * @return void
-     */
     private function generatePHPCodeByFile(ReflectionClass $model): void
     {
         $file = new PhpFile();
-        $namespaceInterface = $this->getNamespaceRepositoryInterface() . DIRECTORY_SEPARATOR . $this->getNameRepositoryInterface();
-        $namespaceBaseClass = $this->getNamespaceBaseRepository() . DIRECTORY_SEPARATOR . $this->getNameBaseRepository();
+        $namespaceInterface = $this->getNamespaceRepositoryInterface() . '\\' . $this->getNameRepositoryInterface();
+        $namespaceBaseClass = $this->getNamespaceBaseRepository() . '\\' . $this->getNameBaseRepository();
         $classDto = $this->getClassName() . config('component.prefix.dto.output');
-        $namespaceDto = $this->getNamespaceDtoOutput() . DIRECTORY_SEPARATOR . $classDto;
+        $namespaceDto = $this->getNamespaceDtoOutput($this->pathOutputDTO) . '\\' . $classDto;
 
         $namespace = $file
             ->addNamespace($this->getNamespaceRepository())
@@ -124,15 +117,12 @@ class RepositoryService extends BaseServiceCreateClass
         }
     }
 
-    /**
-     * @return void
-     */
     private function createBind(): void
     {
         $provider = file(app_path('Providers\\AppServiceProvider.php'));
 
-        $interface = DIRECTORY_SEPARATOR . $this->getNamespaceRepositoryInterface() . DIRECTORY_SEPARATOR . $this->getNameRepositoryInterface();
-        $class = DIRECTORY_SEPARATOR . $this->getNamespaceRepository() . DIRECTORY_SEPARATOR . $this->getNameRepository();
+        $interface = '\\' . $this->getNamespaceRepositoryInterface() . '\\' . $this->getNameRepositoryInterface();
+        $class = '\\' . $this->getNamespaceRepository() . '\\' . $this->getNameRepository();
 
         $lineBind = "\t\t" . '$this->app->bind(' . $interface . '::class, ' . $class . '::class);' . PHP_EOL;
 
@@ -147,11 +137,6 @@ class RepositoryService extends BaseServiceCreateClass
         File::put(app_path('Providers\\AppServiceProvider.php'), $provider);
     }
 
-    /**
-     * @param string $method
-     * @param Method $methodFile
-     * @return void
-     */
     private function addBody(string $method, Method $methodFile): void
     {
         switch ($method) {
@@ -188,9 +173,6 @@ class RepositoryService extends BaseServiceCreateClass
         }
     }
 
-    /**
-     * @return void
-     */
     private function createBaseRepository(): void
     {
         $baseRepository = new PhpFile();
@@ -268,11 +250,6 @@ class RepositoryService extends BaseServiceCreateClass
         }
     }
 
-    /**
-     * @param ClassType $class
-     * @param PhpNamespace $namespace
-     * @return void
-     */
     private function createMethodsHelpers(ClassType $class, PhpNamespace $namespace): void
     {
         $namespace
@@ -301,9 +278,6 @@ class RepositoryService extends BaseServiceCreateClass
             ->addBody('return $this->getQuery()->findOrFail($id);');
     }
 
-    /**
-     * @return void
-     */
     private function createInterface(): void
     {
         $interface = new PhpFile();
@@ -320,16 +294,12 @@ class RepositoryService extends BaseServiceCreateClass
         );
     }
 
-    /**
-     * @param $method
-     * @return void
-     */
     private function getDataByDTO(string $method, PhpNamespace $namespace, Method $methodClass): void
     {
         switch ($method) {
             case MethodsByClassEnum::CREATE:
                 $nameInputDto = MethodsByClassEnum::CREATE_METHOD . config('component.prefix.dto.input') . config('component.prefix.interface');
-                $namespaceInputDto = $this->getNamespaceDtoInputInterface() . DIRECTORY_SEPARATOR . $nameInputDto;
+                $namespaceInputDto = $this->getNamespaceDtoInputInterface() . '\\' . $nameInputDto;
 
                 $namespace
                     ->addUse($namespaceInputDto);
@@ -342,7 +312,7 @@ class RepositoryService extends BaseServiceCreateClass
                 break;
             case MethodsByClassEnum::UPDATE:
                 $nameInputDto = MethodsByClassEnum::UPDATE_METHOD . config('component.prefix.dto.input') . config('component.prefix.interface');
-                $namespaceInputDto = $this->getNamespaceDtoInputInterface() . DIRECTORY_SEPARATOR . $nameInputDto;
+                $namespaceInputDto = $this->getNamespaceDtoInputInterface() . '\\' . $nameInputDto;
 
                 $namespace
                     ->addUse($namespaceInputDto);

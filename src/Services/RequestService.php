@@ -10,7 +10,7 @@ use Nette\PhpGenerator\Method;
 use Nette\PhpGenerator\PhpFile;
 use Toshkq93\Components\Enums\MethodsByClassEnum;
 
-class RequestService extends BaseServiceCreateClass
+final class RequestService extends BaseServiceCreateClass
 {
     /** @var array */
     private array $properties;

@@ -5,25 +5,13 @@ namespace Toshkq93\Components\Console\Commands;
 use Illuminate\Console\Command;
 use Toshkq93\Components\Services\RequestService;
 
-class MakeRequestCommand extends Command
+final class MakeRequestCommand extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
+    protected $hidden = true;
+    protected $description = 'Create Request';
     protected $signature = 'create:request
                             {name}
                             {--properties}';
-
-    /** @var bool  */
-    protected $hidden = true;
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Create Request';
 
     public function __construct(
         private RequestService $service
@@ -32,11 +20,6 @@ class MakeRequestCommand extends Command
         parent::__construct();
     }
 
-    /**
-     * Execute the console command.
-     *
-     * @return int
-     */
     public function handle()
     {
         $this->service->setArgument($this->getNameInput());
@@ -47,11 +30,6 @@ class MakeRequestCommand extends Command
         return self::SUCCESS;
     }
 
-    /**
-     * Get the desired class name from the input.
-     *
-     * @return string
-     */
     private function getNameInput(): string
     {
         return trim($this->argument('name'));

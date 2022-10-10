@@ -2,7 +2,7 @@
 
 namespace Toshkq93\Components\Enums;
 
-class MethodsByClassEnum
+final class MethodsByClassEnum
 {
     const INDEX = 'index';
     const SHOW = 'show';

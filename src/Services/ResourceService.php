@@ -5,14 +5,10 @@ namespace Toshkq93\Components\Services;
 use File;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Resources\Json\ResourceCollection;
-use Illuminate\Support\Str;
 use Nette\PhpGenerator\PhpFile;
 
-class ResourceService extends BaseServiceCreateClass
+final class ResourceService extends BaseServiceCreateClass
 {
-    /**
-     * @return void
-     */
     public function create(): void
     {
         File::makeDirectory(
@@ -25,9 +21,6 @@ class ResourceService extends BaseServiceCreateClass
         $this->createCollection();
     }
 
-    /**
-     * @return void
-     */
     private function createCollection(): void
     {
         $nameClass = $this->getClassName() . config('component.prefix.resource.collection');
@@ -62,9 +55,6 @@ class ResourceService extends BaseServiceCreateClass
         );
     }
 
-    /**
-     * @return void
-     */
     private function createResource(): void
     {
         $nameClass = $this->getClassName() . config('component.prefix.resource.resource');

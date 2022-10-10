@@ -2,24 +2,17 @@
 
 namespace Toshkq93\Components\Console\Commands;
 
-use File;
 use Illuminate\Console\Command;
-use Illuminate\Support\Str;
 use Toshkq93\Components\Enums\DTONameEnum;
 use Toshkq93\Components\Services\DTOService;
 
-class MakeDTOOutputCommand extends Command
+final class MakeDTOOutputCommand extends Command
 {
-    /** @var string */
+    protected $hidden = true;
+    protected $description = 'Create DTO';
     protected $signature = 'make:output-dto
                             {name}
                             {--properties=}';
-
-    /** @var string */
-    protected $description = 'Create DTO';
-
-    /** @var bool */
-    protected $hidden = true;
 
     public function __construct(
         private DTOService $service
@@ -28,11 +21,6 @@ class MakeDTOOutputCommand extends Command
         parent::__construct();
     }
 
-    /**
-     * Execute the console command.
-     *
-     * @return int
-     */
     public function handle()
     {
         $this->service->setFolder(DTONameEnum::OUTPUT);
@@ -46,11 +34,6 @@ class MakeDTOOutputCommand extends Command
         return self::SUCCESS;
     }
 
-    /**
-     * Get the desired class name from the input.
-     *
-     * @return string
-     */
     private function getNameInput(): string
     {
         return trim($this->argument('name'));

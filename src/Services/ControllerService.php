@@ -16,14 +16,10 @@ use Nette\PhpGenerator\PhpNamespace;
 use Nette\PhpGenerator\PsrPrinter;
 use Toshkq93\Components\Enums\MethodsByClassEnum;
 
-class ControllerService extends BaseServiceCreateClass
+final class ControllerService extends BaseServiceCreateClass
 {
     private array $primaryKey;
 
-    /**
-     * @param array $primaryKey
-     * @return void
-     */
     public function setPrimaryKey(array $primaryKey): void
     {
         if (empty($primaryKey)){
@@ -86,10 +82,10 @@ class ControllerService extends BaseServiceCreateClass
      */
     private function createRoute(): void
     {
-        $fileName = Str::afterLast(config('component.route_path'), '\\');
+        $fileName = Str::afterLast($this->replacePathBySystem(config('component.route_path')), DIRECTORY_SEPARATOR);
 
-        if (!File::exists(config('component.route_path'))) {
-            $folder = base_path('routes') . DIRECTORY_SEPARATOR . Str::afterLast(dirname(config('component.route_path')), 'routes\\');
+        if (!File::exists($this->replacePathBySystem(config('component.route_path')))) {
+            $folder = base_path('routes') . DIRECTORY_SEPARATOR . Str::afterLast(dirname($this->replacePathBySystem(config('component.route_path'))), 'routes' . DIRECTORY_SEPARATOR);
 
             File::makeDirectory($folder);
 
@@ -102,9 +98,9 @@ class ControllerService extends BaseServiceCreateClass
 
             $searchMethod = '$this->routes(function () {';
             $routeServiceProvider = file(app_path('Providers') . DIRECTORY_SEPARATOR . 'RouteServiceprovider.php');
-            $prefix = 'api/' . Str::afterLast(dirname(config('component.route_path')), 'routes\\');
+            $prefix = 'api' . DIRECTORY_SEPARATOR . Str::afterLast(dirname($this->replacePathBySystem(config('component.route_path'))), 'routes' . DIRECTORY_SEPARATOR);
 
-            $lineAdd = "\n\t\t\tRoute::prefix('" . $prefix . "')" . PHP_EOL . "\t\t\t\t->middleware('api')" . PHP_EOL . "\t\t\t\t" . '->namespace($this->namespace)' . PHP_EOL . "\t\t\t\t->group(base_path('routes\\" . Str::afterLast(config('component.route_path'), 'routes\\') . "'));" . PHP_EOL;
+            $lineAdd = "\n\t\t\tRoute::prefix('" . $prefix . "')" . PHP_EOL . "\t\t\t\t->middleware('api')" . PHP_EOL . "\t\t\t\t" . '->namespace($this->namespace)' . PHP_EOL . "\t\t\t\t->group(base_path('routes" . DIRECTORY_SEPARATOR . Str::afterLast($this->replacePathBySystem(config('component.route_path')), 'routes' . DIRECTORY_SEPARATOR) . "'));" . PHP_EOL;
 
             foreach ($routeServiceProvider as $key => $line) {
                 if (Str::contains($line, $searchMethod)) {
@@ -112,13 +108,13 @@ class ControllerService extends BaseServiceCreateClass
                 }
             }
 
-            File::put(app_path('Providers\\RouteServiceProvider.php'), $routeServiceProvider);
+            File::put(app_path('Providers\RouteServiceProvider.php'), $routeServiceProvider);
         }
 
         $fileRoute = file(config('component.route_path'));
 
         $searchLine = Route::class;
-        $class = $this->getNamespaceController() . DIRECTORY_SEPARATOR . $this->getNameController();
+        $class = $this->getNamespaceController() . '\\' . $this->getNameController();
         $routeUrl = Str::snake(Str::plural($this->getClassName()), '-');
         $parameter = Str::lower(Str::plural($this->getClassName()));
 
@@ -150,11 +146,11 @@ class ControllerService extends BaseServiceCreateClass
     ): void
     {
         $nameResource = $this->getClassName() . config('component.prefix.resource.resource');
-        $namespaceResource = $this->getNamespaceResource() . DIRECTORY_SEPARATOR . $nameResource;
+        $namespaceResource = $this->getNamespaceResource() . '\\' . $nameResource;
         $nameResourceCollection = $this->getClassName() . config('component.prefix.resource.collection');
-        $namespaceResourceCollection = $this->getNamespaceResource() . DIRECTORY_SEPARATOR . $nameResourceCollection;
+        $namespaceResourceCollection = $this->getNamespaceResource() . '\\' . $nameResourceCollection;
         $nameDTO = Str::ucfirst($method === MethodsByClassEnum::STORE ? MethodsByClassEnum::CREATE : MethodsByClassEnum::UPDATE) . $this->getClassName() . config('component.prefix.dto.input');
-        $namespaceDTO = $this->getNamespaceDtoInput() . DIRECTORY_SEPARATOR . $nameDTO;
+        $namespaceDTO = $this->getNamespaceDtoInput() . '\\' . $nameDTO;
 
         $namespace
             ->addUse(JsonResponse::class);
@@ -282,7 +278,7 @@ class ControllerService extends BaseServiceCreateClass
      */
     private function addService(PhpNamespace $namespace, ClassType $class): void
     {
-        $namespaceService = $this->getNamespaceServiceInterface() . DIRECTORY_SEPARATOR . $this->getClassName() . config('component.prefix.service') . config('component.prefix.interface');
+        $namespaceService = $this->getNamespaceServiceInterface() . '\\' . $this->getClassName() . config('component.prefix.service') . config('component.prefix.interface');
 
         $namespace
             ->addUse($namespaceService);
@@ -312,7 +308,7 @@ class ControllerService extends BaseServiceCreateClass
             case MethodsByClassEnum::UPDATE:
                 $request = Str::ucfirst($method == MethodsByClassEnum::STORE ? MethodsByClassEnum::CREATE_METHOD : MethodsByClassEnum::UPDATE_METHOD);
 
-                $namespaceRequest = $this->getNamespaceRequest() . DIRECTORY_SEPARATOR . $request . $this->getClassName() . config('component.prefix.request');
+                $namespaceRequest = $this->getNamespaceRequest() . '\\' . $request . $this->getClassName() . config('component.prefix.request');
 
                 $parameter = $methodClass
                     ->addParameter('request');

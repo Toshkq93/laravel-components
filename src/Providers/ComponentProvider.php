@@ -12,7 +12,7 @@ use Toshkq93\Components\Console\Commands\MakeRequestCommand;
 use Toshkq93\Components\Console\Commands\MakeResourceCommand;
 use Toshkq93\Components\Console\Commands\MakeServiceCommand;
 
-class ComponentProvider extends ServiceProvider
+final class ComponentProvider extends ServiceProvider
 {
     /**
      * Register services.

@@ -14,11 +14,11 @@ php artisan vendor:publish --provider=Toshkq93\Components\Providers\ComponentPro
 
 Go to the root folder of your project and enter the command:
 ```
-php artisam make:components {namespace model} --all
+php artisam make:components {namespace_model} --all
 ```
 Example:
 ```php
-php artisam make:components App\Models\User --all
+php artisan make:components App/Models/User --all
 ```
 
 and your project will create:

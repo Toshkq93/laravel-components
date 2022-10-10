@@ -12,34 +12,11 @@ use Str;
 use Symfony\Component\Console\Input\InputOption;
 use Toshkq93\Components\Services\ModelService;
 
-class ComponentsCommand extends GeneratorCommand
+final class ComponentsCommand extends GeneratorCommand
 {
-    /**
-     * The console command name.
-     *
-     * @var string
-     */
     protected $name = 'make:components';
-
-    /**
-     * The name of the console command.
-     *
-     * This name is used to identify the command during lazy loading.
-     *
-     * @var string|null
-     *
-     * @deprecated
-     */
     protected static $defaultName = 'make:components';
-
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
     protected $description = 'Create DTOs, service, repository, controller, resources, requests';
-
-    /** @var string */
     private string $path;
 
     public function __construct(
@@ -50,9 +27,6 @@ class ComponentsCommand extends GeneratorCommand
         parent::__construct($files);
     }
 
-    /**
-     * @return false|void
-     */
     public function handle(): bool
     {
         if ($this->isReservedName($this->className())) {
@@ -122,10 +96,6 @@ class ComponentsCommand extends GeneratorCommand
         // TODO: Implement getStub() method.
     }
 
-    /**
-     * @param $properties
-     * @return void
-     */
     private function createDTO($properties): void
     {
         Artisan::call('make:output-dto', [
@@ -145,9 +115,6 @@ class ComponentsCommand extends GeneratorCommand
         $this->info("<fg=white;bg=green>Input DTO by the way {$pathToFilters} create success!</>");
     }
 
-    /**
-     * @return void
-     */
     private function createRepository(): void
     {
         $result = false;
@@ -165,9 +132,6 @@ class ComponentsCommand extends GeneratorCommand
         $this->info("<fg=white;bg=green>" . config('component.prefix.repository') . " " . $this->className() . config('component.prefix.repository') . " create success!</>");
     }
 
-    /**
-     * @return void
-     */
     private function createService(): void
     {
         $result = false;
@@ -186,9 +150,6 @@ class ComponentsCommand extends GeneratorCommand
         $this->info("<fg=white;bg=green>" . config('component.prefix.service') . " " . $this->className() . config('component.prefix.service') . " create success!</>");
     }
 
-    /**
-     * @return void
-     */
     private function createResource(): void
     {
         Artisan::call('create:resource', [
@@ -199,10 +160,6 @@ class ComponentsCommand extends GeneratorCommand
         $this->info("<fg=white;bg=green>Resources by the way {$path} create success!</>");
     }
 
-    /**
-     * @param $properties
-     * @return void
-     */
     private function createRequest($properties): void
     {
         Artisan::call('create:request', [
@@ -214,9 +171,6 @@ class ComponentsCommand extends GeneratorCommand
         $this->info("<fg=white;bg=green>Requests by the way {$path} create success!</>");
     }
 
-    /**
-     * @return void
-     */
     private function createController(array $primaryKey): void
     {
         Artisan::call("create:controller", [
@@ -231,27 +185,21 @@ class ComponentsCommand extends GeneratorCommand
         $this->info("<fg=white;bg=green>" . config('component.prefix.controller') . " " . $this->className() . config('component.prefix.controller') . " create success!</>");
     }
 
-    /**
-     * @return string
-     */
     private function classPath(): string
     {
-        return $this->path . DIRECTORY_SEPARATOR . $this->className();
+        return $this->path . '\\' . $this->className();
     }
 
-    /**
-     * @return string
-     */
     private function className(): string
     {
         return class_basename($this->getNameInput());
     }
 
-    /**
-     * Get the console command options.
-     *
-     * @return array
-     */
+    protected function getNameInput()
+    {
+        return trim(Str::replace('/', '\\', $this->argument('name')));
+    }
+
     protected function getOptions()
     {
         return [

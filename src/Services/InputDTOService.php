@@ -12,37 +12,34 @@ use Spatie\DataTransferObject\Attributes\CastWith;
 use App\DTO\Casters\Date\CarbonCaster;
 use Toshkq93\Components\Enums\MethodsByClassEnum;
 
-class InputDTOService extends BaseServiceCreateClass
+final class InputDTOService extends BaseServiceCreateClass
 {
-    /** @var string */
     private string $folder;
-
-    /** @var array */
     private array $properties;
+    private string $pathInputDTO;
+    private string $pathInputDTOInterface;
 
-    /**
-     * @param string $folder
-     */
+    public function __construct()
+    {
+        parent::__construct();
+        $this->pathInputDTO = $this->replacePathBySystem(config('component.paths.input'));
+        $this->pathInputDTOInterface = $this->replacePathBySystem(config('component.paths.interface.dto.input'));
+    }
+
     public function setFolder(string $folder): void
     {
         $this->folder = $folder;
     }
 
-    /**
-     * @param array $properties
-     */
     public function setProperties(array $properties): void
     {
         $this->properties = $properties;
     }
 
-    /**
-     * @return void
-     */
     public function createInterfaces(): void
     {
-        $path = Str::before(Str::after(config('component.paths.input'), 'app\\'), '\\');
-        $dirNameByInterface = Str::afterLast(config('component.paths.interface.dto.input'), '\\');
+        $path = Str::before(Str::after($this->pathInputDTO, 'app' . DIRECTORY_SEPARATOR), DIRECTORY_SEPARATOR);
+        $dirNameByInterface = Str::afterLast($this->pathInputDTOInterface, DIRECTORY_SEPARATOR);
 
         if (!File::exists(app_path($path) . DIRECTORY_SEPARATOR . Str::ucfirst($this->folder) . DIRECTORY_SEPARATOR . $dirNameByInterface)) {
             File::makeDirectory(
@@ -72,9 +69,6 @@ class InputDTOService extends BaseServiceCreateClass
         }
     }
 
-    /**
-     * @return void
-     */
     public function create(): void
     {
         File::makeDirectory(
@@ -89,8 +83,8 @@ class InputDTOService extends BaseServiceCreateClass
 
         foreach (MethodsByClassEnum::DTO_INPUT_NAMES as $dto) {
             $nameDTO = $dto . $this->getClassName() . config('component.prefix.dto.input');
-            $namespaceInterface = $this->getNamespaceDtoInputInterface() . DIRECTORY_SEPARATOR . $dto . config('component.prefix.dto.input') . config('component.prefix.interface');
-            $namespaceBaseDto = $this->getNamespaceBaseDto() . DIRECTORY_SEPARATOR . $this->getNameBaseDto();
+            $namespaceInterface = $this->getNamespaceDtoInputInterface() . '\\' . $dto . config('component.prefix.dto.input') . config('component.prefix.interface');
+            $namespaceBaseDto = $this->getNamespaceBaseDto($this->pathInputDTO) . '\\' . $this->getNameBaseDto();
 
             $file = new PhpFile();
 
@@ -123,7 +117,7 @@ class InputDTOService extends BaseServiceCreateClass
                 }
             }
 
-            File::put(config('component.paths.input') . DIRECTORY_SEPARATOR . $this->getFolderPathByDto() . DIRECTORY_SEPARATOR . $nameDTO . '.php', $file);
+            File::put($this->pathInputDTO . DIRECTORY_SEPARATOR . $this->getFolderPathByDto() . DIRECTORY_SEPARATOR . $nameDTO . '.php', $file);
         }
     }
 }

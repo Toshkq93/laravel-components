@@ -6,6 +6,7 @@ use App\DTO\Input\Interfaces\CreateInputInterface;
 use App\DTO\Input\Interfaces\UpdateInputInterface;
 use App\DTO\Output\Interfaces\OutputInterface;
 use File;
+use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Nette\PhpGenerator\Literal;
@@ -15,37 +16,36 @@ use Spatie\DataTransferObject\Caster;
 use Spatie\DataTransferObject\DataTransferObject;
 use App\DTO\Casters\Date\CarbonCaster;
 
-class DTOService extends BaseServiceCreateClass
+final class DTOService extends BaseServiceCreateClass
 {
-    /** @var string */
     private string $folder;
-
-    /** @var array */
     private array $properties;
+    private string $pathInputDTO;
+    private string $pathOutputDTO;
+    private string $pathOutputInterface;
 
-    /**
-     * @param string $folder
-     */
+    public function __construct()
+    {
+        parent::__construct();
+        $this->pathInputDTO = $this->replacePathBySystem(config('component.paths.input'));
+        $this->pathOutputInterface = $this->replacePathBySystem(config('component.paths.interface.dto.output'));
+        $this->pathOutputDTO = $this->replacePathBySystem(config('component.paths.output'));
+    }
+
     public function setFolder(string $folder): void
     {
         $this->folder = $folder;
     }
 
-    /**
-     * @param array $properties
-     */
     public function setProperties(array $properties): void
     {
         $this->properties = $properties;
     }
 
-    /**
-     * @return void
-     */
     public function createBaseDTO(): void
     {
-        $path = Str::before(Str::after(config('component.paths.input'), 'app\\'), '\\');
-        $dirNameByInterface = Str::afterLast(config('component.paths.interface.dto.output'), '\\');
+        $path = Str::before(Str::after($this->pathInputDTO, 'app' . DIRECTORY_SEPARATOR), DIRECTORY_SEPARATOR);
+        $dirNameByInterface = Str::afterLast($this->pathOutputInterface, DIRECTORY_SEPARATOR);
 
         if (!File::exists(
             app_path($path) . DIRECTORY_SEPARATOR . $this->getNameBaseDto() . '.php'
@@ -60,7 +60,7 @@ class DTOService extends BaseServiceCreateClass
             $file = new PhpFile();
 
             $namespace = $file
-                ->addNamespace($this->getNamespaceBaseDto())
+                ->addNamespace($this->getNamespaceBaseDto($this->pathInputDTO))
                 ->addUse(DataTransferObject::class);
 
             $namespace
@@ -82,26 +82,6 @@ class DTOService extends BaseServiceCreateClass
         }
     }
 
-    /**
-     * @return void
-     */
-    private function createInterface(): void
-    {
-        $namespaceInputDTO = $this->getNamespaceDtoOutputInterface();
-        $nameInterface = config('component.prefix.dto.output') . config('component.prefix.interface');
-        $file = new PhpFile();
-
-        $namespace = $file
-            ->addNamespace($namespaceInputDTO);
-
-        $namespace->addInterface($nameInterface);
-
-        File::put(config('component.paths.interface.dto.output') . DIRECTORY_SEPARATOR . $nameInterface . '.php', $file);
-    }
-
-    /**
-     * @return void
-     */
     public function create(): void
     {
         $this->createCasterDate();
@@ -116,11 +96,11 @@ class DTOService extends BaseServiceCreateClass
         $file = new PhpFile();
 
         $nameDTO = $this->getClassName() . config('component.prefix.dto.output');
-        $namespaceInterface = $this->getNamespaceDtoOutputInterface() . DIRECTORY_SEPARATOR . config('component.prefix.dto.output') . config('component.prefix.interface');
-        $namespaceBaseDto = $this->getNamespaceBaseDto() . DIRECTORY_SEPARATOR . $this->getNameBaseDto();
+        $namespaceInterface = $this->getNamespaceDtoOutputInterface() . '\\' . config('component.prefix.dto.output') . config('component.prefix.interface');
+        $namespaceBaseDto = $this->getNamespaceBaseDto($this->pathInputDTO) . '\\' . $this->getNameBaseDto();
 
         $namespace = $file
-            ->addNamespace($this->getNamespaceDtoOutput())
+            ->addNamespace($this->getNamespaceDtoOutput($this->pathOutputDTO))
             ->addUse($namespaceInterface)
             ->addUse($namespaceBaseDto);
 
@@ -150,16 +130,13 @@ class DTOService extends BaseServiceCreateClass
         File::put(config('component.paths.output') . DIRECTORY_SEPARATOR . $this->getFolderPathByDto() . DIRECTORY_SEPARATOR . $nameDTO . '.php', $file);
     }
 
-    /**
-     * @return void
-     */
     private function createCasterDate(): void
     {
-        $pathToDto = Str::before(Str::after(config('component.paths.input'), 'app\\'), '\\');
-        $path = app_path($pathToDto) . '\Casters\Date';
+        $pathToDto = Str::before(Str::after($this->pathOutputDTO, 'app' . DIRECTORY_SEPARATOR), DIRECTORY_SEPARATOR);
+        $path = app_path($pathToDto) . DIRECTORY_SEPARATOR . 'Casters' . DIRECTORY_SEPARATOR . 'Date';
         $namespace = 'App\\' . $pathToDto . '\Casters\Date';
 
-        if (!File::exists(app_path($pathToDto) . '\Casters')) {
+        if (!File::exists($path)) {
             File::makeDirectory(
                 $path,
                 0777,
@@ -177,6 +154,7 @@ class DTOService extends BaseServiceCreateClass
 
         $class = $namespace
             ->addClass('CarbonCaster')
+            ->setFinal()
             ->addImplement(Caster::class);
 
         $method = $class
@@ -194,5 +172,23 @@ class DTOService extends BaseServiceCreateClass
             ->setType('mixed');
 
         File::put($path . DIRECTORY_SEPARATOR . 'CarbonCaster.php', $file);
+    }
+
+    private function createInterface(): void
+    {
+        $namespaceInputDTO = $this->getNamespaceDtoOutputInterface();
+        $nameInterface = config('component.prefix.dto.output') . config('component.prefix.interface');
+
+        $file = new PhpFile();
+
+        $namespace = $file
+            ->addNamespace($namespaceInputDTO)
+            ->addUse(Arrayable::class);
+
+        $interface = $namespace->addInterface($nameInterface);
+
+        $interface->addExtend(Arrayable::class);
+
+        File::put(config('component.paths.interface.dto.output') . DIRECTORY_SEPARATOR . $nameInterface . '.php', $file);
     }
 }

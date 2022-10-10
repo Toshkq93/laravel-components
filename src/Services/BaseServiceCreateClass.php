@@ -3,36 +3,35 @@
 namespace Toshkq93\Components\Services;
 
 use Illuminate\Support\Str;
+use Toshkq93\Components\Enums\OperationSystemEnum;
 
 class BaseServiceCreateClass
 {
-    /** @var string */
     protected string $argument;
-
-    /** @var array|null */
     protected null|array $option;
+    protected string $system;
 
-    /**
-     * @param string $argument
-     */
+    public function __construct()
+    {
+        $this->system = strtoupper(substr(PHP_OS, 0, 3));
+    }
+
     public function setArgument(string $argument): void
     {
         $this->argument = $argument;
     }
 
-    /**
-     * @param array|null $option
-     */
     public function setOption(?array $option): void
     {
         $this->option = $option;
     }
 
     /** DTO */
-
-    protected function getNamespaceBaseDto(): string
+    protected function getNamespaceBaseDto(string $path): string
     {
-        return 'App' . DIRECTORY_SEPARATOR . Str::before(Str::after(config('component.paths.input'), 'app\\'), '\\');
+        return $this->replaceNamespace(
+            'App' . DIRECTORY_SEPARATOR . Str::before(Str::after($path, 'app' . DIRECTORY_SEPARATOR), DIRECTORY_SEPARATOR)
+        );
     }
 
     protected function getNameBaseDto(): string
@@ -42,22 +41,30 @@ class BaseServiceCreateClass
 
     protected function getNamespaceDtoInputInterface(): string
     {
-        return 'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.interface.dto.input'), 'app\\');
+        return $this->replaceNamespace(
+            'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.interface.dto.input'), 'app' . DIRECTORY_SEPARATOR)
+        );
     }
 
     protected function getNamespaceDtoOutputInterface(): string
     {
-        return 'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.interface.dto.output'), 'app\\');
+        return $this->replaceNamespace(
+            'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.interface.dto.output'), 'app' . DIRECTORY_SEPARATOR)
+        );
     }
 
-    protected function getNamespaceDtoOutput(): string
+    protected function getNamespaceDtoOutput(string $path): string
     {
-        return 'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.output'), 'app\\') . DIRECTORY_SEPARATOR . $this->getFolderPathByDto();
+        return $this->replaceNamespace(
+            'App' . DIRECTORY_SEPARATOR . Str::after($path, 'app' . DIRECTORY_SEPARATOR) . $this->getFolderPathByDto()
+        );
     }
 
     protected function getNamespaceDtoInput(): string
     {
-        return 'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.input'), 'app\\') . DIRECTORY_SEPARATOR . $this->getFolderPathByDto();
+        return $this->replaceNamespace(
+            'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.input'), 'app' . DIRECTORY_SEPARATOR) . $this->getFolderPathByDto()
+        );
     }
 
     /** end DTO */
@@ -66,7 +73,9 @@ class BaseServiceCreateClass
 
     protected function getNamespaceController(): string
     {
-        return 'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.controller'), 'app\\') . $this->getFolderPath();
+        return $this->replaceNamespace(
+            'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.controller'), 'app' . DIRECTORY_SEPARATOR) . $this->getFolderPath()
+        );
     }
 
     protected function getNameController(): string
@@ -77,145 +86,139 @@ class BaseServiceCreateClass
     /** end Controller */
 
     /** Request */
-
     protected function getNamespaceRequest(): string
     {
-        return 'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.request'), 'app\\') . DIRECTORY_SEPARATOR . $this->getFolderPathByDto();
+        return $this->replaceNamespace(
+            'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.request'), 'app' . DIRECTORY_SEPARATOR) . $this->getFolderPathByDto()
+        );
+    }
+
+    protected function getFolderPathByDto(): string
+    {
+        switch ($this->system){
+            case OperationSystemEnum::WINDOWNS:
+                return $this->argument;
+            case OperationSystemEnum::LINUX:
+                return $this->argument;
+        }
+
+        return Str::between($this->argument, DIRECTORY_SEPARATOR, DIRECTORY_SEPARATOR) ?: $this->getClassName();
     }
 
     /** end Request */
 
     /** Resource */
-
     protected function getNamespaceResource(): string
     {
-        return 'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.resource'), 'app\\') . DIRECTORY_SEPARATOR . $this->getFolderPathByDto();
+        return $this->replaceNamespace(
+            'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.resource'), 'app' . DIRECTORY_SEPARATOR) . $this->getFolderPathByDto()
+        );
     }
 
     /** end Resource */
 
     /** Services */
-
-    /**
-     * @return string
-     */
     protected function getNamespaceServiceInterface(): string
     {
-        return 'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.interface.service'), 'app\\') . $this->getFolderPath();
+        return $this->replaceNamespace(
+            'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.interface.service'), 'app' . DIRECTORY_SEPARATOR) . $this->getFolderPath()
+        );
     }
 
-    /**
-     * @return string
-     */
     protected function getNamespaceBaseService(): string
     {
-        return 'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.service'), 'app\\');
+        return $this->replaceNamespace(
+            'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.service'), 'app' . DIRECTORY_SEPARATOR)
+        );
     }
 
-    /**
-     * @return string
-     */
     protected function getNameServiceInterface(): string
     {
         return $this->getClassName() . config('component.prefix.service') . config('component.prefix.interface');
     }
 
-    /**
-     * @return string
-     */
     protected function getNameBaseService(): string
     {
         return config('component.base_name') . config('component.prefix.service');
     }
 
-    /**
-     * @return string
-     */
     protected function getNameService(): string
     {
         return $this->getClassName() . config('component.prefix.service');
     }
 
-    /**
-     * @return string
-     */
     protected function getNamespaceService(): string
     {
-        return 'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.service'), 'app\\') . $this->getFolderPath();
+        return $this->replaceNamespace(
+            'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.service'), 'app' . DIRECTORY_SEPARATOR) . $this->getFolderPath()
+        );
     }
 
     /** end Services */
 
     /** Repository */
-
-    /**
-     * @return string
-     */
     protected function getNamespaceRepositoryInterface(): string
     {
-        return 'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.interface.repository'), 'app\\') . $this->getFolderPath();
+        return $this->replaceNamespace(
+            'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.interface.repository'), 'app' . DIRECTORY_SEPARATOR) . $this->getFolderPath()
+        );
     }
 
-    /**
-     * @return string
-     */
     protected function getNamespaceBaseRepository(): string
     {
-        return 'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.repository'), 'app\\');
+        return $this->replaceNamespace(
+            'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.repository'), 'app' . DIRECTORY_SEPARATOR)
+        );
     }
 
-    /**
-     * @return string
-     */
     protected function getNameRepositoryInterface(): string
     {
         return $this->getClassName() . config('component.prefix.repository') . config('component.prefix.interface');
     }
 
-    /**
-     * @return string
-     */
     protected function getNameBaseRepository(): string
     {
         return config('component.base_name') . config('component.prefix.repository');
     }
 
-    /**
-     * @return string
-     */
     protected function getNameRepository(): string
     {
         return $this->getClassName() . config('component.prefix.repository');
     }
 
-    /**
-     * @return string
-     */
     protected function getNamespaceRepository(): string
     {
-        return 'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.repository'), 'app\\') . $this->getFolderPath();
+        return $this->replaceNamespace(
+            'App' . DIRECTORY_SEPARATOR . Str::after(config('component.paths.repository'), 'app' . DIRECTORY_SEPARATOR) . $this->getFolderPath()
+        );
     }
 
     /** end Repository */
 
-    /**
-     * @return string
-     */
+    protected function replacePathBySystem(string $string)
+    {
+        switch ($this->system){
+            case OperationSystemEnum::WINDOWNS:
+                return Str::replace('/', '\\', $string);
+            case OperationSystemEnum::LINUX:
+                return Str::replace('\\', '/', $string);
+        }
+
+        return $string;
+    }
+
     protected function getFolderPath(): string
     {
         return Str::beforeLast($this->argument, '\\');
     }
 
-    protected function getFolderPathByDto(): string
-    {
-        return Str::between($this->argument, '\\', '\\') ?: $this->getClassName();
-    }
-
-    /**
-     * @return string
-     */
     protected function getClassName(): string
     {
         return class_basename($this->argument);
+    }
+
+    private function replaceNamespace(string $namespace)
+    {
+        return Str::replace('/', '\\', $namespace);
     }
 }
